@@ -1,0 +1,1849 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task 3.1 – Métodos de Despliegue y Operación en AWS</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,300&display=swap');
+
+        :root {
+            --aws-orange: #FF9900;
+            --aws-dark: #232F3E;
+            --aws-blue: #1A73E8;
+            --accent-green: #00A86B;
+            --accent-purple: #7B2FBE;
+            --accent-red: #E8343A;
+            --bg-page: #F7F8FA;
+            --bg-card: #FFFFFF;
+            --text-main: #1A1F2E;
+            --text-muted: #6B7280;
+            --border: #E5E7EB;
+            --mono: 'IBM Plex Mono', monospace;
+            --sans: 'IBM Plex Sans', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg-page);
+            color: var(--text-main);
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        /* ── HERO ── */
+        .hero {
+            background: var(--aws-dark);
+            color: white;
+            padding: 60px 48px 48px;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -60px; right: -60px;
+            width: 340px; height: 340px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,153,0,0.18) 0%, transparent 70%);
+        }
+        .hero-eyebrow {
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--aws-orange);
+            margin-bottom: 16px;
+        }
+        .hero h1 {
+            font-size: 2.6em;
+            font-weight: 700;
+            line-height: 1.15;
+            max-width: 680px;
+            margin-bottom: 20px;
+        }
+        .hero h1 span { color: var(--aws-orange); }
+        .hero-sub {
+            font-size: 1em;
+            color: #A0AEC0;
+            max-width: 560px;
+            margin-bottom: 32px;
+        }
+        .hero-tags { display: flex; gap: 10px; flex-wrap: wrap; }
+        .hero-tag {
+            font-family: var(--mono);
+            font-size: 11px;
+            padding: 5px 12px;
+            border: 1px solid rgba(255,153,0,0.4);
+            border-radius: 3px;
+            color: var(--aws-orange);
+            letter-spacing: 0.05em;
+        }
+
+        /* ── NAV ── */
+        .nav-bar {
+            background: white;
+            border-bottom: 2px solid var(--aws-orange);
+            padding: 0 48px;
+            display: flex;
+            gap: 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            overflow-x: auto;
+        }
+        .nav-btn {
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 16px 18px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .nav-btn:hover, .nav-btn.active {
+            color: var(--aws-dark);
+            border-bottom-color: var(--aws-orange);
+        }
+
+        /* ── SECTIONS ── */
+        .section {
+            display: none;
+            padding: 48px;
+            max-width: 1200px;
+            margin: 0 auto;
+            animation: fadeIn 0.3s ease;
+        }
+        .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .section-title {
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--aws-orange);
+            margin-bottom: 8px;
+        }
+        .section-heading {
+            font-size: 2em;
+            font-weight: 700;
+            margin-bottom: 32px;
+            color: var(--aws-dark);
+        }
+
+        /* ── CARDS ── */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 28px;
+            margin-bottom: 20px;
+        }
+        .card-title {
+            font-weight: 700;
+            font-size: 1.1em;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card-title .icon { font-size: 1.3em; }
+
+        /* Accent borders */
+        .card.orange { border-left: 4px solid var(--aws-orange); }
+        .card.blue   { border-left: 4px solid var(--aws-blue); }
+        .card.green  { border-left: 4px solid var(--accent-green); }
+        .card.purple { border-left: 4px solid var(--accent-purple); }
+        .card.red    { border-left: 4px solid var(--accent-red); }
+
+        /* ── GRID ── */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        @media (max-width: 900px) {
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+        }
+
+        /* ── METHOD CARD ── */
+        .method-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .method-card-header {
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .method-card-body { padding: 20px 24px; }
+        .method-badge {
+            display: inline-block;
+            font-family: var(--mono);
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 3px;
+            margin-bottom: 10px;
+            letter-spacing: 0.05em;
+        }
+        .badge-orange { background: #FFF3D0; color: #B45309; }
+        .badge-blue   { background: #DBEAFE; color: #1E40AF; }
+        .badge-green  { background: #D1FAE5; color: #065F46; }
+        .badge-purple { background: #EDE9FE; color: #5B21B6; }
+        .badge-dark   { background: #F3F4F6; color: #374151; }
+
+        .method-name {
+            font-size: 1.25em;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .method-tag { font-size: 0.85em; color: var(--text-muted); }
+
+        /* ── ANALOGY BOX ── */
+        .analogy {
+            background: #FFFBEB;
+            border-left: 4px solid var(--aws-orange);
+            padding: 16px 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 16px 0;
+            font-style: italic;
+            font-size: 0.92em;
+        }
+        .analogy strong { font-style: normal; color: var(--aws-dark); }
+
+        /* ── CODE BLOCK ── */
+        .code-block {
+            background: #0F172A;
+            border-radius: 8px;
+            padding: 20px 24px;
+            font-family: var(--mono);
+            font-size: 0.82em;
+            line-height: 1.7;
+            color: #E2E8F0;
+            overflow-x: auto;
+            margin: 16px 0;
+        }
+        .code-block .comment { color: #64748B; }
+        .code-block .keyword { color: #F59E0B; }
+        .code-block .string  { color: #34D399; }
+        .code-block .param   { color: #60A5FA; }
+
+        /* ── PROS / CONS ── */
+        .pros-cons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .pros, .cons {
+            border-radius: 6px;
+            padding: 14px;
+        }
+        .pros { background: #F0FDF4; }
+        .cons { background: #FEF2F2; }
+        .pros h5 { color: #15803D; font-size: 0.8em; margin-bottom: 8px; letter-spacing: 0.05em; font-family: var(--mono); }
+        .cons h5 { color: #B91C1C; font-size: 0.8em; margin-bottom: 8px; letter-spacing: 0.05em; font-family: var(--mono); }
+        .pros li, .cons li { font-size: 0.88em; margin-left: 16px; margin-bottom: 5px; }
+
+        /* ── DECISION TABLE ── */
+        .decision-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+            margin: 16px 0;
+        }
+        .decision-table th {
+            background: var(--aws-dark);
+            color: white;
+            padding: 12px 16px;
+            text-align: left;
+            font-family: var(--mono);
+            font-size: 0.8em;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+        .decision-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+        .decision-table tr:nth-child(even) td { background: #FAFAFA; }
+        .decision-table tr:hover td { background: #FFF3D0; }
+        .check { color: #15803D; font-weight: 700; }
+        .cross { color: #B91C1C; font-weight: 700; }
+        .neutral { color: var(--text-muted); }
+
+        /* ── DEPLOYMENT VISUAL ── */
+        .deploy-model {
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .deploy-model-header {
+            padding: 18px 22px;
+            font-weight: 700;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .deploy-model-body { padding: 18px 22px; }
+        .deploy-model.cloud-native .deploy-model-header  { background: #EEF2FF; color: #3730A3; }
+        .deploy-model.hybrid       .deploy-model-header  { background: #FFF7ED; color: #9A3412; }
+        .deploy-model.on-prem      .deploy-model-header  { background: #F0FDF4; color: #14532D; }
+
+        /* ── NETWORK DIAGRAM ── */
+        .network-zone {
+            border: 2px dashed;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 12px 0;
+            position: relative;
+        }
+        .network-zone .zone-label {
+            position: absolute;
+            top: -11px;
+            left: 16px;
+            background: white;
+            padding: 0 8px;
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+        }
+        .zone-internet { border-color: #94A3B8; }
+        .zone-aws      { border-color: var(--aws-orange); }
+        .zone-vpc      { border-color: var(--aws-blue); }
+        .zone-internet .zone-label { color: #64748B; }
+        .zone-aws .zone-label      { color: var(--aws-orange); }
+        .zone-vpc .zone-label      { color: var(--aws-blue); }
+
+        .service-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 4px;
+        }
+        .chip-public  { background: #DBEAFE; color: #1E40AF; border: 1px solid #BFDBFE; }
+        .chip-private { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+
+        /* ── CONNECTIVITY ── */
+        .connect-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 22px;
+        }
+        .connect-card h4 {
+            font-size: 1em;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ── EXAM ALERT ── */
+        .exam-alert {
+            background: #232F3E;
+            color: white;
+            border-radius: 8px;
+            padding: 22px 26px;
+            margin: 24px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .exam-alert::before {
+            content: 'CLF-C02';
+            position: absolute;
+            top: -10px; right: 20px;
+            font-family: var(--mono);
+            font-size: 60px;
+            opacity: 0.05;
+            color: var(--aws-orange);
+            font-weight: 700;
+        }
+        .exam-alert h4 {
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--aws-orange);
+            margin-bottom: 12px;
+        }
+        .exam-alert ul { margin-left: 20px; }
+        .exam-alert li { margin-bottom: 8px; font-size: 0.93em; line-height: 1.5; }
+
+        /* ── QUESTION / ANSWER ── */
+        .qa-block {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+        .qa-q {
+            background: #F8FAFC;
+            padding: 14px 18px;
+            font-weight: 600;
+            font-size: 0.93em;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        .qa-q::after { content: '▾'; color: var(--aws-orange); font-size: 1.1em; }
+        .qa-q.open::after { content: '▴'; }
+        .qa-a {
+            padding: 14px 18px;
+            font-size: 0.9em;
+            background: white;
+            display: none;
+        }
+        .qa-a.open { display: block; }
+        .qa-correct { color: var(--accent-green); font-weight: 700; }
+
+        /* ── WORKSHOP BOX ── */
+        .workshop {
+            background: linear-gradient(135deg, #232F3E 0%, #37475A 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 28px;
+            margin: 24px 0;
+        }
+        .workshop h3 {
+            font-family: var(--mono);
+            font-size: 13px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--aws-orange);
+            margin-bottom: 14px;
+        }
+        .workshop ol { margin-left: 22px; }
+        .workshop li { margin-bottom: 10px; font-size: 0.9em; line-height: 1.5; }
+        .workshop code {
+            background: rgba(255,153,0,0.2);
+            color: var(--aws-orange);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: var(--mono);
+            font-size: 0.9em;
+        }
+
+        /* ── TAG ── */
+        .tag {
+            display: inline-block;
+            font-family: var(--mono);
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 3px;
+            background: #F3F4F6;
+            color: #374151;
+            margin: 2px;
+            letter-spacing: 0.04em;
+        }
+        .tag.orange { background: #FFF3D0; color: #B45309; }
+        .tag.blue   { background: #DBEAFE; color: #1E40AF; }
+        .tag.green  { background: #D1FAE5; color: #065F46; }
+
+        /* ── SUMMARY MATRIX ── */
+        .matrix-wrap { overflow-x: auto; }
+        .matrix {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85em;
+            min-width: 700px;
+        }
+        .matrix th {
+            background: var(--aws-dark);
+            color: white;
+            padding: 10px 14px;
+            font-family: var(--mono);
+            font-size: 0.8em;
+            text-align: center;
+            font-weight: 600;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .matrix td {
+            padding: 10px 14px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        .matrix .row-label {
+            text-align: left;
+            font-weight: 600;
+            background: #F8FAFC;
+        }
+        .star { color: var(--aws-orange); }
+
+        /* ── CURRICULUM BOX ── */
+        .curriculum {
+            background: #F0F4FF;
+            border: 1px solid #C7D2FE;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin: 20px 0;
+        }
+        .curriculum h4 {
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #4338CA;
+            margin-bottom: 12px;
+        }
+        .curriculum ul { margin-left: 20px; }
+        .curriculum li { font-size: 0.88em; margin-bottom: 6px; line-height: 1.5; }
+
+        /* ── FOOTER ── */
+        .footer {
+            background: var(--aws-dark);
+            color: #A0AEC0;
+            text-align: center;
+            padding: 30px;
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: 0.08em;
+        }
+        .footer span { color: var(--aws-orange); }
+
+        /* ── ARROW FLOW ── */
+        .flow {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 16px 0;
+        }
+        .flow-step {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px 16px;
+            font-size: 0.85em;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .flow-arrow { color: var(--aws-orange); font-size: 1.2em; }
+
+        hr.divider { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+    </style>
+</head>
+<body>
+
+<!-- ══ HERO ══ -->
+<div class="hero">
+    <div class="hero-eyebrow">CLF-C02 · Domain 3 · Task Statement 3.1</div>
+    <h1>Métodos de <span>despliegue</span> y<br>operación en AWS</h1>
+    <p class="hero-sub">Guía completa para clase y examen · Acceso programático, CLI, Consola, IaC, modelos de despliegue y conectividad de red.</p>
+    <div class="hero-tags">
+        <span class="hero-tag">34% del examen</span>
+        <span class="hero-tag">API · SDK · CLI</span>
+        <span class="hero-tag">Management Console</span>
+        <span class="hero-tag">IaC</span>
+        <span class="hero-tag">Cloud Models</span>
+        <span class="hero-tag">Connectivity</span>
+    </div>
+</div>
+
+<!-- ══ NAV ══ -->
+<nav class="nav-bar">
+    <button class="nav-btn active" onclick="show('overview')">Visión General</button>
+    <button class="nav-btn" onclick="show('methods')">Métodos de Acceso</button>
+    <button class="nav-btn" onclick="show('iac')">IaC 🔧</button>
+    <button class="nav-btn" onclick="show('models')">Modelos Despliegue</button>
+    <button class="nav-btn" onclick="show('network')">Red y Zonas</button>
+    <button class="nav-btn" onclick="show('connectivity')">Conectividad</button>
+    <button class="nav-btn" onclick="show('exam')">🎯 Examen</button>
+    <button class="nav-btn" onclick="show('workshop')">🛠 Taller</button>
+</nav>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SECCIÓN 0: VISIÓN GENERAL                      -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="section-overview" class="section active">
+    <div class="section-title">Task 3.1 / Dominio 3</div>
+    <h2 class="section-heading">¿Qué cubre esta Task Statement?</h2>
+
+    <div class="curriculum">
+        <h4>📚 Enlace con OPTATIVAS IYC Cloud – Contenidos impartidos</h4>
+        <ul>
+            <li><strong>RA3 – Infraestructura y almacenamiento:</strong> scripts y herramientas para configuración automática (IaC: Terraform, CloudFormation, Ansible)</li>
+            <li><strong>RA3c – Automatización:</strong> tareas de mantenimiento y gestión automáticas</li>
+            <li><strong>RA1b – Modelos de despliegue:</strong> nube pública, privada, híbrida</li>
+            <li><strong>RA5 – Seguridad:</strong> IAM, políticas de acceso → conecta con gestión de credenciales de acceso programático</li>
+        </ul>
+    </div>
+
+    <div class="grid-3">
+        <div class="card orange">
+            <div class="card-title"><span class="icon">🖥️</span> Métodos de Acceso</div>
+            <p style="font-size:0.9em">Cómo <em>hablas</em> con AWS: API, SDK, CLI, Management Console.</p>
+            <div style="margin-top:12px">
+                <span class="tag orange">API</span>
+                <span class="tag orange">SDK</span>
+                <span class="tag orange">CLI</span>
+                <span class="tag orange">Console</span>
+            </div>
+        </div>
+        <div class="card blue">
+            <div class="card-title"><span class="icon">🏗️</span> IaC</div>
+            <p style="font-size:0.9em">Infraestructura como código: repetible, versionable, automatizable.</p>
+            <div style="margin-top:12px">
+                <span class="tag blue">CloudFormation</span>
+                <span class="tag blue">Terraform</span>
+                <span class="tag blue">CDK</span>
+            </div>
+        </div>
+        <div class="card green">
+            <div class="card-title"><span class="icon">☁️</span> Modelos Despliegue</div>
+            <p style="font-size:0.9em">Cloud nativa, híbrida, on-premises y las diferencias críticas del examen.</p>
+            <div style="margin-top:12px">
+                <span class="tag green">Public</span>
+                <span class="tag green">Private</span>
+                <span class="tag green">Hybrid</span>
+                <span class="tag green">Multi-cloud</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:20px">
+        <div class="card purple">
+            <div class="card-title"><span class="icon">🌐</span> Zonas Public vs Private (AWS)</div>
+            <p style="font-size:0.9em">Qué significa que un servicio AWS sea "público" o "privado" → lógica de red, no de acceso.</p>
+        </div>
+        <div class="card red">
+            <div class="card-title"><span class="icon">🔌</span> Conectividad de Red</div>
+            <p style="font-size:0.9em">VPN, Direct Connect, internet público y cuándo elegir cada uno.</p>
+        </div>
+    </div>
+
+    <div class="exam-alert" style="margin-top:32px">
+        <h4>🎯 Foco del examen CLF-C02 en esta Task</h4>
+        <ul>
+            <li>Identificar <strong>cuándo usar</strong> cada método de acceso (no solo saber que existen)</li>
+            <li>Diferenciar <strong>operaciones únicas vs. procesos repetibles</strong> → cuándo aplicar IaC</li>
+            <li>Distinguir <strong>hybrid cloud vs. hybrid environment</strong> (confusión frecuente en el examen)</li>
+            <li>Entender qué hace <strong>público o privado a un servicio AWS</strong> desde la perspectiva de red</li>
+            <li>Saber qué tipo de gateway usar para distintos escenarios de conectividad</li>
+        </ul>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+        <div class="card-title" style="font-family:var(--mono); font-size:0.85em; color:var(--text-muted)">PREGUNTA-GUÍA DEL TEMA</div>
+        <p style="font-size:1.05em; font-weight:600; color:var(--aws-dark)">"¿Qué método usarías para crear 50 buckets S3 idénticos en 3 regiones distintas, de forma que el proceso sea repetible y versionable?"</p>
+        <p style="margin-top:10px; font-size:0.9em; color:var(--text-muted)">Usa esta pregunta al inicio de clase para motivar el tema. La respuesta correcta emerge sola conforme avanza la presentación.</p>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SECCIÓN 1: MÉTODOS DE ACCESO                  -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="section-methods" class="section">
+    <div class="section-title">Task 3.1 / Métodos de Acceso</div>
+    <h2 class="section-heading">Las 4 formas de hablar con AWS</h2>
+
+    <div class="analogy">
+        <strong>Analogía:</strong> Imagina que AWS es un banco. Puedes ir en persona a la sucursal (Management Console), llamar por teléfono siguiendo un menú (CLI), usar la app del banco desde tu programa (SDK/API) o crear una orden automática programada (IaC). Mismo banco, distintas interfaces, misma cuenta.
+    </div>
+
+    <div class="grid-2">
+
+        <!-- API -->
+        <div class="method-card">
+            <div class="method-card-header">
+                <span class="method-badge badge-orange">REST API</span>
+                <div class="method-name">🔗 AWS API (Application Programming Interface)</div>
+                <div class="method-tag">Todo lo que haces en AWS, acaba siendo una llamada API</div>
+            </div>
+            <div class="method-card-body">
+                <p style="font-size:0.9em; margin-bottom:12px">Es la capa más baja de comunicación con AWS. Cualquier otro método (SDK, CLI, Consola) usa APIs por debajo. Se hacen mediante <strong>HTTPS</strong> con firma <strong>SigV4</strong>.</p>
+                <div class="code-block">
+<span class="comment"># Ejemplo de llamada directa a la API REST</span>
+<span class="keyword">GET</span> <span class="string">https://s3.amazonaws.com/my-bucket</span>
+<span class="param">Authorization</span>: AWS4-HMAC-SHA256 Credential=AKID...
+<span class="param">X-Amz-Date</span>: 20240125T120000Z
+                </div>
+                <div class="pros-cons">
+                    <div class="pros">
+                        <h5>✓ USO DIRECTO</h5>
+                        <ul>
+                            <li>Control total</li>
+                            <li>Cualquier lenguaje</li>
+                            <li>Máxima flexibilidad</li>
+                        </ul>
+                    </div>
+                    <div class="cons">
+                        <h5>✗ LIMITACIONES</h5>
+                        <ul>
+                            <li>Gestión manual de auth</li>
+                            <li>Más código a escribir</li>
+                            <li>Propenso a errores</li>
+                        </ul>
+                    </div>
+                </div>
+                <div style="margin-top:14px">
+                    <span class="tag">Bajo nivel</span>
+                    <span class="tag">Automatización avanzada</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SDK -->
+        <div class="method-card">
+            <div class="method-card-header">
+                <span class="method-badge badge-blue">SDK</span>
+                <div class="method-name">📦 AWS SDKs (Software Development Kits)</div>
+                <div class="method-tag">APIs envueltas en librerías del lenguaje de tu elección</div>
+            </div>
+            <div class="method-card-body">
+                <p style="font-size:0.9em; margin-bottom:12px">Abstraen la complejidad de las APIs directas. Disponibles en Python (Boto3), JavaScript, Java, .NET, Go, Ruby, PHP, C++, y más.</p>
+                <div class="code-block">
+<span class="comment"># Python con Boto3 – crear un bucket S3</span>
+<span class="keyword">import</span> boto3
+
+s3 = boto3.client(<span class="string">'s3'</span>, region_name=<span class="string">'eu-west-1'</span>)
+s3.create_bucket(
+    <span class="param">Bucket</span>=<span class="string">'mi-bucket-clase'</span>,
+    <span class="param">CreateBucketConfiguration</span>={
+        <span class="string">'LocationConstraint'</span>: <span class="string">'eu-west-1'</span>
+    }
+)
+<span class="comment"># ✓ Auth automática (usa ~/.aws/credentials)</span>
+                </div>
+                <div class="pros-cons">
+                    <div class="pros">
+                        <h5>✓ VENTAJAS</h5>
+                        <ul>
+                            <li>Auth gestionada</li>
+                            <li>Reintentos automáticos</li>
+                            <li>Tipos nativos del lenguaje</li>
+                        </ul>
+                    </div>
+                    <div class="cons">
+                        <h5>✗ LIMITACIONES</h5>
+                        <ul>
+                            <li>Dependencia del lenguaje</li>
+                            <li>Versiones a mantener</li>
+                        </ul>
+                    </div>
+                </div>
+                <div style="margin-top:14px">
+                    <span class="tag blue">boto3 (Python)</span>
+                    <span class="tag blue">aws-sdk-js</span>
+                    <span class="tag blue">aws-sdk-java</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CLI -->
+        <div class="method-card">
+            <div class="method-card-header">
+                <span class="method-badge badge-green">CLI v2</span>
+                <div class="method-name">⌨️ AWS CLI (Command Line Interface)</div>
+                <div class="method-tag">SDK de Python envuelto en comandos de terminal</div>
+            </div>
+            <div class="method-card-body">
+                <p style="font-size:0.9em; margin-bottom:12px">Herramienta de línea de comandos que permite interactuar con cualquier servicio AWS. Perfecta para scripts, automatización y operaciones repetitivas.</p>
+                <div class="code-block">
+<span class="comment"># Crear bucket</span>
+aws s3 mb s3://mi-bucket-clase --region eu-west-1
+
+<span class="comment"># Subir archivo</span>
+aws s3 cp archivo.txt s3://mi-bucket-clase/
+
+<span class="comment"># Listar instancias EC2</span>
+aws ec2 describe-instances \
+    --query <span class="string">'Reservations[*].Instances[*].InstanceId'</span> \
+    --output table
+
+<span class="comment"># Operaciones repetibles con script Bash</span>
+<span class="keyword">for</span> region <span class="keyword">in</span> eu-west-1 us-east-1 ap-southeast-1; <span class="keyword">do</span>
+    aws s3 mb s3://bucket-$region --region $region
+<span class="keyword">done</span>
+                </div>
+                <div class="pros-cons">
+                    <div class="pros">
+                        <h5>✓ VENTAJAS</h5>
+                        <ul>
+                            <li>Scripts bash/shell</li>
+                            <li>Multiplataforma</li>
+                            <li>Rápido y ligero</li>
+                            <li>Pipes con otros tools</li>
+                        </ul>
+                    </div>
+                    <div class="cons">
+                        <h5>✗ LIMITACIONES</h5>
+                        <ul>
+                            <li>Sin estado (cada comando independiente)</li>
+                            <li>Sin rollback automático</li>
+                            <li>Difícil de escalar</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Management Console -->
+        <div class="method-card">
+            <div class="method-card-header">
+                <span class="method-badge badge-purple">WEB GUI</span>
+                <div class="method-name">🖱️ AWS Management Console</div>
+                <div class="method-tag">Interfaz gráfica web – la más visual, la menos automatizable</div>
+            </div>
+            <div class="method-card-body">
+                <p style="font-size:0.9em; margin-bottom:12px">Interfaz web accesible en <strong>console.aws.amazon.com</strong>. Ideal para exploración, aprendizaje y operaciones puntuales. Por debajo, hace llamadas API como cualquier otro método.</p>
+                <div class="analogy" style="margin:12px 0">
+                    <strong>Analogía:</strong> Ir al cajero del banco. Perfecto para operaciones esporádicas. ¿Harías 50 transferencias clicando en el cajero? No, usarías banca online o una orden programada.
+                </div>
+                <div class="pros-cons">
+                    <div class="pros">
+                        <h5>✓ VENTAJAS</h5>
+                        <ul>
+                            <li>Cero configuración</li>
+                            <li>Visual e intuitivo</li>
+                            <li>Ideal para aprender</li>
+                            <li>Dashboards integrados</li>
+                        </ul>
+                    </div>
+                    <div class="cons">
+                        <h5>✗ LIMITACIONES</h5>
+                        <ul>
+                            <li>No automatizable</li>
+                            <li>Error humano</li>
+                            <li>No repetible</li>
+                            <li>Lento para escala</li>
+                        </ul>
+                    </div>
+                </div>
+                <div style="margin-top:14px">
+                    <span class="tag">Aprendizaje</span>
+                    <span class="tag">Operaciones únicas</span>
+                    <span class="tag">Visualización</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DECISION TABLE -->
+    <h3 style="margin:32px 0 16px; font-size:1.2em; color:var(--aws-dark)">¿Cuándo usar qué? — Tabla de decisión</h3>
+    <div class="matrix-wrap">
+        <table class="decision-table">
+            <thead>
+                <tr>
+                    <th>Escenario</th>
+                    <th>Console</th>
+                    <th>CLI</th>
+                    <th>SDK</th>
+                    <th>IaC</th>
+                    <th>Mejor opción</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Explorar un servicio nuevo</td>
+                    <td class="check">✓✓</td>
+                    <td class="neutral">○</td>
+                    <td class="neutral">○</td>
+                    <td class="cross">✗</td>
+                    <td><strong>Console</strong></td>
+                </tr>
+                <tr>
+                    <td>Crear 1 bucket S3 de prueba</td>
+                    <td class="check">✓✓</td>
+                    <td class="check">✓</td>
+                    <td class="neutral">○</td>
+                    <td class="cross">✗</td>
+                    <td><strong>Console o CLI</strong></td>
+                </tr>
+                <tr>
+                    <td>Crear 50 buckets en 3 regiones</td>
+                    <td class="cross">✗</td>
+                    <td class="check">✓</td>
+                    <td class="neutral">○</td>
+                    <td class="check">✓✓</td>
+                    <td><strong>IaC</strong></td>
+                </tr>
+                <tr>
+                    <td>Integrar AWS en tu aplicación</td>
+                    <td class="cross">✗</td>
+                    <td class="cross">✗</td>
+                    <td class="check">✓✓</td>
+                    <td class="neutral">○</td>
+                    <td><strong>SDK</strong></td>
+                </tr>
+                <tr>
+                    <td>Deploy de infraestructura repetible</td>
+                    <td class="cross">✗</td>
+                    <td class="neutral">○</td>
+                    <td class="neutral">○</td>
+                    <td class="check">✓✓</td>
+                    <td><strong>IaC</strong></td>
+                </tr>
+                <tr>
+                    <td>Script rápido de mantenimiento</td>
+                    <td class="cross">✗</td>
+                    <td class="check">✓✓</td>
+                    <td class="check">✓</td>
+                    <td class="neutral">○</td>
+                    <td><strong>CLI</strong></td>
+                </tr>
+                <tr>
+                    <td>Auditar quién creó un recurso</td>
+                    <td class="check">✓</td>
+                    <td class="neutral">○</td>
+                    <td class="neutral">○</td>
+                    <td class="neutral">○</td>
+                    <td><strong>Console (CloudTrail)</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SECCIÓN 2: IaC                                 -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="section-iac" class="section">
+    <div class="section-title">Task 3.1 / IaC</div>
+    <h2 class="section-heading">Infrastructure as Code (IaC)</h2>
+
+    <div class="analogy">
+        <strong>Analogía maestra:</strong> Construir infraestructura sin IaC es como cocinar sin receta: cada vez que cocinas el plato queda diferente, no puedes darlo a otra persona para que lo cocine igual, y si te equivocas no puedes "deshacer". IaC es la <strong>receta en Git</strong>: reproducible, versionable, compartible y con historial de cambios.
+    </div>
+
+    <div class="grid-2">
+        <div class="card orange">
+            <div class="card-title"><span class="icon">☁️</span> AWS CloudFormation</div>
+            <p style="font-size:0.9em; margin-bottom:12px"><strong>Nativo de AWS.</strong> Define tu infraestructura en JSON o YAML. AWS gestiona el orden de creación, las dependencias y el rollback si algo falla.</p>
+            <div class="code-block">
+<span class="comment"># cloudformation-s3.yaml</span>
+<span class="keyword">AWSTemplateFormatVersion</span>: <span class="string">'2010-09-09'</span>
+<span class="keyword">Description</span>: <span class="string">Bucket S3 para la clase</span>
+
+<span class="keyword">Resources</span>:
+  <span class="param">MiBucket</span>:
+    <span class="keyword">Type</span>: AWS::S3::Bucket
+    <span class="keyword">Properties</span>:
+      <span class="param">BucketName</span>: <span class="string">mi-bucket-clase-2024</span>
+      <span class="param">VersioningConfiguration</span>:
+        <span class="keyword">Status</span>: Enabled
+      <span class="param">Tags</span>:
+        - <span class="keyword">Key</span>: Entorno
+          <span class="keyword">Value</span>: Clase
+
+<span class="comment"># Desplegar con CLI:</span>
+aws cloudformation deploy \
+  --template-file cloudformation-s3.yaml \
+  --stack-name mi-stack-clase
+            </div>
+            <div style="margin-top:12px">
+                <span class="tag orange">Free</span>
+                <span class="tag orange">JSON/YAML</span>
+                <span class="tag orange">Rollback automático</span>
+                <span class="tag orange">Stacks</span>
+            </div>
+        </div>
+
+        <div class="card blue">
+            <div class="card-title"><span class="icon">🌍</span> Terraform (HashiCorp)</div>
+            <p style="font-size:0.9em; margin-bottom:12px"><strong>Multi-cloud, open source.</strong> Lenguaje propio (HCL). Puede gestionar AWS, Azure, GCP y otros proveedores con el mismo código. El más usado en la industria.</p>
+            <div class="code-block">
+<span class="comment"># main.tf – Bucket S3 con Terraform</span>
+<span class="keyword">provider</span> <span class="string">"aws"</span> {
+  region = <span class="string">"eu-west-1"</span>
+}
+
+<span class="keyword">resource</span> <span class="string">"aws_s3_bucket"</span> <span class="string">"clase"</span> {
+  bucket = <span class="string">"mi-bucket-terraform-clase"</span>
+  tags = {
+    <span class="param">Entorno</span> = <span class="string">"Clase"</span>
+    <span class="param">Gestionado</span> = <span class="string">"Terraform"</span>
+  }
+}
+
+<span class="comment"># Comandos:</span>
+terraform init   <span class="comment"># Descarga providers</span>
+terraform plan   <span class="comment"># Vista previa de cambios</span>
+terraform apply  <span class="comment"># Aplica los cambios</span>
+terraform destroy <span class="comment"># Elimina todo</span>
+            </div>
+            <div style="margin-top:12px">
+                <span class="tag blue">Multi-cloud</span>
+                <span class="tag blue">HCL</span>
+                <span class="tag blue">State file</span>
+                <span class="tag blue">Plan/Apply</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:20px">
+        <div class="card green">
+            <div class="card-title"><span class="icon">🐍</span> AWS CDK (Cloud Development Kit)</div>
+            <p style="font-size:0.9em; margin-bottom:12px">Define infraestructura con código real: Python, TypeScript, Java. Por debajo genera CloudFormation. Perfecto para developers que prefieren su lenguaje habitual.</p>
+            <div class="code-block" style="font-size:0.78em">
+<span class="comment"># cdk_stack.py – Python</span>
+<span class="keyword">from</span> aws_cdk <span class="keyword">import</span> aws_s3 as s3
+
+<span class="keyword">class</span> MiStack(Stack):
+    <span class="keyword">def</span> __init__(self, scope, id, **kwargs):
+        <span class="keyword">super</span>().__init__(scope, id, **kwargs)
+        s3.Bucket(self, <span class="string">"MiBucket"</span>,
+            versioned=<span class="keyword">True</span>,
+            removal_policy=RemovalPolicy.DESTROY
+        )
+            </div>
+            <div style="margin-top:12px">
+                <span class="tag green">Python/TS/Java</span>
+                <span class="tag green">Genera CFN</span>
+                <span class="tag green">Developer-friendly</span>
+            </div>
+        </div>
+
+        <div class="card purple">
+            <div class="card-title"><span class="icon">🔧</span> Ansible (configuración de IaC)</div>
+            <p style="font-size:0.9em; margin-bottom:12px">Más orientado a <strong>configuración de sistemas</strong> que a provisión de infraestructura cloud. Sin agentes. YAML. Ideal para combinar con Terraform: Terraform crea la VM, Ansible la configura.</p>
+            <div class="code-block" style="font-size:0.78em">
+<span class="comment"># playbook.yaml</span>
+<span class="keyword">- name</span>: <span class="string">Configurar servidor web</span>
+  <span class="param">hosts</span>: all
+  <span class="param">tasks</span>:
+    - <span class="keyword">name</span>: <span class="string">Instalar nginx</span>
+      apt:
+        <span class="param">name</span>: nginx
+        <span class="param">state</span>: present
+    - <span class="keyword">name</span>: <span class="string">Copiar configuración</span>
+      template:
+        <span class="param">src</span>: nginx.conf.j2
+        <span class="param">dest</span>: /etc/nginx/nginx.conf
+            </div>
+            <div style="margin-top:12px">
+                <span class="tag purple">Sin agentes</span>
+                <span class="tag purple">Idempotente</span>
+                <span class="tag purple">Config Mgmt</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- FLUJO IaC -->
+    <h3 style="margin:32px 0 16px; font-size:1.15em; color:var(--aws-dark)">Flujo típico de trabajo con IaC</h3>
+    <div class="flow">
+        <div class="flow-step">📝 Escribir código<br><small style="color:var(--text-muted)">.yaml / .tf / .py</small></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">🔍 Review / Plan<br><small style="color:var(--text-muted)">terraform plan</small></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">📦 Commit a Git<br><small style="color:var(--text-muted)">Control de versiones</small></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">🤖 CI/CD Pipeline<br><small style="color:var(--text-muted)">CodePipeline / GitHub Actions</small></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">☁️ Deploy en AWS<br><small style="color:var(--text-muted)">Automático</small></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">📊 Monitorizar<br><small style="color:var(--text-muted)">CloudWatch</small></div>
+    </div>
+
+    <!-- OPERACIONES ÚNICAS vs REPETIBLES -->
+    <h3 style="margin:32px 0 16px; font-size:1.15em; color:var(--aws-dark)">Operaciones únicas vs. Procesos repetibles — Clave del examen</h3>
+    <div class="grid-2">
+        <div class="card orange">
+            <div class="card-title">⚡ Operación ÚNICA (one-time)</div>
+            <p style="font-size:0.9em; margin-bottom:10px">Tareas que se hacen una sola vez, no se van a repetir, no necesitan ser reproducibles exactamente.</p>
+            <ul style="margin-left:18px; font-size:0.88em; margin-top:10px">
+                <li>Explorar servicios nuevos</li>
+                <li>Crear recurso de prueba rápida</li>
+                <li>Consultar un log puntual</li>
+                <li>Cambio de emergencia en producción</li>
+            </ul>
+            <div style="margin-top:12px; padding:10px; background:#FFF3D0; border-radius:6px; font-size:0.85em">
+                <strong>→ Usa:</strong> Management Console o CLI puntual
+            </div>
+        </div>
+        <div class="card blue">
+            <div class="card-title">🔄 Proceso REPETIBLE (repeatable)</div>
+            <p style="font-size:0.9em; margin-bottom:10px">Tareas que se harán varias veces, en varios entornos (dev/staging/prod), o que deben ser reproducibles exactamente por cualquier miembro del equipo.</p>
+            <ul style="margin-left:18px; font-size:0.88em; margin-top:10px">
+                <li>Crear entorno completo de la app</li>
+                <li>Deploy de producción</li>
+                <li>Replicar infra en otra región</li>
+                <li>Onboarding de nuevo cliente</li>
+            </ul>
+            <div style="margin-top:12px; padding:10px; background:#DBEAFE; border-radius:6px; font-size:0.85em">
+                <strong>→ Usa:</strong> IaC (CloudFormation, Terraform, CDK)
+            </div>
+        </div>
+    </div>
+
+    <div class="exam-alert" style="margin-top:24px">
+        <h4>🎯 Lo que pregunta el examen sobre IaC</h4>
+        <ul>
+            <li><strong>AWS CloudFormation</strong> es el servicio nativo de IaC en AWS → respuesta cuando digan "nativo AWS"</li>
+            <li>IaC permite <strong>consistencia</strong> entre entornos y <strong>reduce errores humanos</strong></li>
+            <li>Cuando pregunten "¿cómo hacer reproducible el aprovisionamiento?" → IaC</li>
+            <li>CloudFormation usa el concepto de <strong>Stack</strong> (conjunto de recursos gestionados juntos)</li>
+            <li>Si un Stack falla durante el despliegue → <strong>rollback automático</strong></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SECCIÓN 3: MODELOS DE DESPLIEGUE              -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="section-models" class="section">
+    <div class="section-title">Task 3.1 / Modelos de Despliegue</div>
+    <h2 class="section-heading">Modelos de despliegue en la nube</h2>
+
+    <!-- CONFUSIÓN CRÍTICA -->
+    <div style="background:#FEF2F2; border:2px solid #F87171; border-radius:10px; padding:24px; margin-bottom:32px;">
+        <div style="font-family:var(--mono); font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:#B91C1C; margin-bottom:12px">⚠️ CONFUSIÓN MÁS FRECUENTE EN EL EXAMEN</div>
+        <div class="grid-2">
+            <div>
+                <p style="font-weight:700; margin-bottom:8px; color:#7F1D1D">Hybrid Cloud ≠ Hybrid Environment</p>
+                <p style="font-size:0.88em; line-height:1.6"><strong>Hybrid Cloud:</strong> Combina nube pública + nube privada (ambas cumplen criterios de cloud computing: auto-servicio, elasticidad, etc.)</p>
+                <p style="font-size:0.88em; margin-top:8px; line-height:1.6"><strong>Hybrid Environment:</strong> Tu data center on-premises + AWS juntos. El data center tradicional NO es cloud.</p>
+            </div>
+            <div style="background:#FFF; padding:16px; border-radius:8px; border:1px solid #FECACA">
+                <p style="font-size:0.85em; font-weight:600; margin-bottom:8px">Ejemplo del examen:</p>
+                <p style="font-size:0.85em; line-height:1.6; color:#374151">"Una empresa usa AWS y su data center local conectados mediante Direct Connect" →</p>
+                <p style="font-size:0.88em; margin-top:8px; color:#15803D; font-weight:700">✓ Esto es un HYBRID ENVIRONMENT, no hybrid cloud</p>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:grid; gap:20px;">
+
+        <!-- PUBLIC CLOUD -->
+        <div class="deploy-model cloud-native">
+            <div class="deploy-model-header">
+                <span style="font-size:1.5em">☁️</span>
+                <div>
+                    <div style="font-size:1.1em; font-weight:700">Public Cloud (Nube Pública)</div>
+                    <div style="font-size:0.85em; opacity:0.8; font-weight:400">AWS, Azure, Google Cloud — el foco principal del examen CLF-C02</div>
+                </div>
+            </div>
+            <div class="deploy-model-body">
+                <div class="grid-2">
+                    <div>
+                        <p style="font-size:0.9em; margin-bottom:12px">Infraestructura gestionada por un tercero (AWS). Accesible públicamente. Multi-tenant. Pago por uso. Cumple los 5 criterios NIST de cloud computing.</p>
+                        <ul style="margin-left:18px; font-size:0.88em">
+                            <li>Todo en AWS es public cloud por defecto</li>
+                            <li>Escala ilimitada bajo demanda</li>
+                            <li>Sin inversión inicial (CAPEX ≈ 0)</li>
+                            <li>AWS gestiona el hardware</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class="analogy" style="margin:0">
+                            <strong>☁️ Analogía:</strong> Vivir en apartamento alquilado. No compras el edificio, pero tienes tu piso, llave propia y puedes cambiarte cuando quieras.
+                        </div>
+                        <div style="margin-top:12px; font-size:0.85em; font-weight:600; color:#3730A3">Ejemplo AWS: EC2, S3, RDS, Lambda…</div>
+                        <div style="margin-top:6px">
+                            <span class="tag blue">Multi-tenant</span>
+                            <span class="tag blue">OPEX</span>
+                            <span class="tag blue">Elástico</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRIVATE CLOUD -->
+        <div class="deploy-model" style="border-color: #E11D48;">
+            <div class="deploy-model-header" style="background:#FFF1F2; color:#9F1239">
+                <span style="font-size:1.5em">🔒</span>
+                <div>
+                    <div style="font-size:1.1em; font-weight:700">Private Cloud (Nube Privada)</div>
+                    <div style="font-size:0.85em; opacity:0.8; font-weight:400">Dedicada a una sola organización · Cumple criterios cloud · Servicio dedicado</div>
+                </div>
+            </div>
+            <div class="deploy-model-body">
+                <div class="grid-2">
+                    <div>
+                        <p style="font-size:0.9em; margin-bottom:12px">Infraestructura cloud dedicada exclusivamente a tu organización. Puede estar en tus instalaciones o en las del proveedor. La diferencia con on-premise: <strong>cumple criterios cloud</strong> (auto-servicio, elasticidad, metering).</p>
+                        <ul style="margin-left:18px; font-size:0.88em">
+                            <li><strong>AWS Outposts:</strong> rack de AWS en tu data center</li>
+                            <li>Single-tenant</li>
+                            <li>Control total del entorno</li>
+                            <li>Cumplimiento normativo estricto</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class="analogy" style="margin:0">
+                            <strong>🏠 Analogía:</strong> Casa propia o chalet privado. Tú decides todo, pero tienes que mantenerlo.
+                        </div>
+                        <div style="margin-top:12px; font-size:0.85em; font-weight:600; color:#9F1239">Ejemplo AWS: AWS Outposts (hardware AWS en tu CPD)</div>
+                        <div style="margin-top:6px">
+                            <span class="tag" style="background:#FFE4E6; color:#9F1239">Single-tenant</span>
+                            <span class="tag" style="background:#FFE4E6; color:#9F1239">CAPEX alto</span>
+                            <span class="tag" style="background:#FFE4E6; color:#9F1239">Control total</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HYBRID CLOUD -->
+        <div class="deploy-model hybrid">
+            <div class="deploy-model-header">
+                <span style="font-size:1.5em">🔄</span>
+                <div>
+                    <div style="font-size:1.1em; font-weight:700">Hybrid Cloud (Nube Híbrida)</div>
+                    <div style="font-size:0.85em; opacity:0.8; font-weight:400">Public + Private Cloud · Ambas deben cumplir criterios cloud</div>
+                </div>
+            </div>
+            <div class="deploy-model-body">
+                <div class="grid-2">
+                    <div>
+                        <p style="font-size:0.9em; margin-bottom:12px">Combinación de nube pública y privada que trabajan juntas. Permite mover cargas entre ambas entornos de forma fluida.</p>
+                        <ul style="margin-left:18px; font-size:0.88em">
+                            <li>Datos sensibles en private cloud</li>
+                            <li>Burst to public cloud en picos</li>
+                            <li>Transición gradual a la nube</li>
+                        </ul>
+                        <div style="margin-top:14px; padding:10px; background:#FFF7ED; border-radius:6px; font-size:0.85em; border:1px solid #FED7AA">
+                            <strong>⚡ AWS Outposts</strong> es la solución híbrida nativa de AWS: extiende AWS a tu data center.
+                        </div>
+                    </div>
+                    <div>
+                        <div class="analogy" style="margin:0">
+                            <strong>🏘️ Analogía:</strong> Casa propia + apartamento alquilado extra cuando tienes visitas de temporada.
+                        </div>
+                        <div style="margin-top:14px; padding:12px; background:#FEF9C3; border:1px solid #FDE68A; border-radius:6px; font-size:0.85em">
+                            <strong>Hybrid Cloud ≠ Hybrid Environment</strong><br>
+                            <span style="color:#92400E">Si usas tu data center + AWS = Hybrid Environment<br>
+                            Si usas AWS Outposts + AWS = Hybrid Cloud</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MULTI-CLOUD -->
+        <div class="deploy-model" style="border-color: #7C3AED;">
+            <div class="deploy-model-header" style="background:#EDE9FE; color:#5B21B6">
+                <span style="font-size:1.5em">🌍</span>
+                <div>
+                    <div style="font-size:1.1em; font-weight:700">Multi-cloud</div>
+                    <div style="font-size:0.85em; opacity:0.8; font-weight:400">2 o más proveedores de nube pública · AWS + Azure + GCP</div>
+                </div>
+            </div>
+            <div class="deploy-model-body">
+                <div class="grid-2">
+                    <div>
+                        <p style="font-size:0.9em; margin-bottom:12px">Uso simultáneo de múltiples proveedores de nube pública para distintas cargas de trabajo.</p>
+                        <ul style="margin-left:18px; font-size:0.88em">
+                            <li>Evita dependencia de un solo proveedor (vendor lock-in)</li>
+                            <li>Mejor servicio de cada cloud</li>
+                            <li>Redundancia entre proveedores</li>
+                            <li>Alta complejidad operativa</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class="analogy" style="margin:0">
+                            <strong>🏢🏢🏢 Analogía:</strong> Apartamentos en varios edificios de distintos propietarios. Más libertad, más llaves que gestionar.
+                        </div>
+                        <div style="margin-top:12px">
+                            <span class="tag purple">No vendor lock-in</span>
+                            <span class="tag purple">Alta complejidad</span>
+                            <span class="tag purple">IaC esencial</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ON-PREMISES -->
+        <div class="deploy-model" style="border-color: #6B7280;">
+            <div class="deploy-model-header" style="background:#F9FAFB; color:#374151">
+                <span style="font-size:1.5em">🖥️</span>
+                <div>
+                    <div style="font-size:1.1em; font-weight:700">On-Premises (On-Prem)</div>
+                    <div style="font-size:0.85em; opacity:0.8; font-weight:400">Tu data center físico · NO es cloud · Solo sirve para contrastar con cloud en el examen</div>
+                </div>
+            </div>
+            <div class="deploy-model-body">
+                <p style="font-size:0.9em; margin-bottom:12px">Infraestructura física en tus instalaciones. No cumple los criterios de cloud computing (no es elástica, no tiene auto-servicio instantáneo). Se menciona en el examen únicamente para contrastar.</p>
+                <div class="grid-2">
+                    <ul style="margin-left:18px; font-size:0.88em">
+                        <li>Compras el hardware</li>
+                        <li>Tú lo mantienes todo</li>
+                        <li>Escalado muy lento (semanas/meses)</li>
+                        <li>CAPEX brutal</li>
+                    </ul>
+                    <div style="background:#F3F4F6; padding:12px; border-radius:6px; font-size:0.85em">
+                        <strong>Para el examen:</strong> On-premise aparece siempre como el "pasado" del que AWS te ayuda a migrar, o como parte de un hybrid environment.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SECCIÓN 4: ZONAS PUBLIC/PRIVATE EN AWS         -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="section-network" class="section">
+    <div class="section-title">Task 3.1 / Servicios AWS: Public vs Private</div>
+    <h2 class="section-heading">Zonas de red en AWS: Público vs Privado</h2>
+
+    <div style="background:#FEF9C3; border:1px solid #FDE68A; border-radius:8px; padding:18px 22px; margin-bottom:28px;">
+        <strong>⚡ Concepto clave:</strong> En AWS, "público" y "privado" describen la <strong>conectividad de red</strong> de un servicio, NO quién puede usarlo o si necesita credenciales. Un servicio "público" de AWS simplemente tiene una interfaz de red conectada al internet público.
+    </div>
+
+    <!-- DIAGRAMA DE ZONAS -->
+    <h3 style="margin-bottom:20px; font-size:1.1em; color:var(--aws-dark)">Arquitectura de zonas de red en AWS</h3>
+
+    <div class="network-zone zone-internet">
+        <span class="zone-label">INTERNET PÚBLICO</span>
+        <p style="font-size:0.85em; color:var(--text-muted); margin-bottom:14px">Cualquier usuario con conexión a internet</p>
+
+        <div class="network-zone zone-aws">
+            <span class="zone-label">AWS PUBLIC ZONE</span>
+            <p style="font-size:0.85em; color:var(--text-muted); margin-bottom:14px">Servicios con interfaz de red conectada al internet público. Accesibles desde internet CON las credenciales correctas.</p>
+            <div>
+                <span class="service-chip chip-public">☁️ Amazon S3</span>
+                <span class="service-chip chip-public">🔑 IAM</span>
+                <span class="service-chip chip-public">☁️ CloudFront</span>
+                <span class="service-chip chip-public">📊 CloudWatch</span>
+                <span class="service-chip chip-public">🔧 AWS CLI endpoint</span>
+                <span class="service-chip chip-public">🌐 EC2 Public IP</span>
+            </div>
+            <p style="font-size:0.8em; margin-top:12px; color:#1E40AF; font-style:italic">💡 "Público" = accesible vía internet. Requiere autenticación pero no VPN.</p>
+
+            <div class="network-zone zone-vpc" style="margin-top:16px">
+                <span class="zone-label">AWS PRIVATE ZONE (VPC)</span>
+                <p style="font-size:0.85em; color:var(--text-muted); margin-bottom:14px">Completamente aislado. Sin acceso directo desde internet. Solo accesible desde dentro de la VPC (o mediante configuración explícita).</p>
+                <div>
+                    <span class="service-chip chip-private">🖥️ EC2 (private subnet)</span>
+                    <span class="service-chip chip-private">🗄️ RDS (private)</span>
+                    <span class="service-chip chip-private">🏗️ VPC Internals</span>
+                    <span class="service-chip chip-private">📁 EFS (privado)</span>
+                </div>
+                <p style="font-size:0.8em; margin-top:12px; color:#92400E; font-style:italic">🔒 "Privado" = aislado de internet. Para acceder, necesitas configuración explícita (IGW, NAT, VPN…)</p>
+            </div>
+        </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- GATEWAYS -->
+    <h3 style="margin-bottom:20px; font-size:1.15em; color:var(--aws-dark)">Gateways: ¿cuándo usar cuál?</h3>
+    <div class="grid-2">
+        <div class="card orange">
+            <div class="card-title"><span class="icon">🚪</span> Internet Gateway (IGW)</div>
+            <p style="font-size:0.9em; margin-bottom:12px">Permite que instancias EC2 en una <strong>subred pública</strong> envíen y reciban tráfico desde internet. Horizontalmente escalado y altamente disponible.</p>
+            <div class="analogy" style="margin-bottom:12px">
+                <strong>Analogía:</strong> La puerta principal del edificio. Permite entrada y salida al exterior.
+            </div>
+            <ul style="margin-left:18px; font-size:0.88em">
+                <li>Para instancias <strong>con IP pública</strong></li>
+                <li>Tráfico bidireccional (entrada + salida)</li>
+                <li>Necesita ruta en la tabla de rutas</li>
+            </ul>
+            <div style="margin-top:12px; font-family:var(--mono); font-size:0.8em; background:#FFF3D0; padding:10px; border-radius:6px">
+                EC2 pública → IGW → Internet ✓<br>
+                Internet → IGW → EC2 pública ✓
+            </div>
+        </div>
+
+        <div class="card blue">
+            <div class="card-title"><span class="icon">🔀</span> NAT Gateway</div>
+            <p style="font-size:0.9em; margin-bottom:12px">Permite que instancias en <strong>subredes privadas</strong> salgan a internet (actualizaciones, descargas) sin ser accesibles desde internet.</p>
+            <div class="analogy" style="margin-bottom:12px">
+                <strong>Analogía:</strong> El portero del edificio. Deja salir a los residentes privados pero no deja entrar a desconocidos.
+            </div>
+            <ul style="margin-left:18px; font-size:0.88em">
+                <li>Para instancias <strong>en subred privada</strong></li>
+                <li>Solo tráfico de <strong>salida</strong></li>
+                <li>Vive en subred pública, usa IGW</li>
+                <li>Gestionado por AWS (HA automática)</li>
+            </ul>
+            <div style="margin-top:12px; font-family:var(--mono); font-size:0.8em; background:#DBEAFE; padding:10px; border-radius:6px">
+                EC2 privada → NAT GW → IGW → Internet ✓<br>
+                Internet → NAT GW → EC2 privada ✗
+            </div>
+        </div>
+    </div>
+
+    <div class="card green" style="margin-top:20px">
+        <div class="card-title"><span class="icon">🔗</span> Egress-Only Internet Gateway (IPv6)</div>
+        <p style="font-size:0.9em">Equivalente al NAT Gateway pero para <strong>tráfico IPv6</strong>. Permite salida a internet desde instancias IPv6 privadas, bloqueando las conexiones entrantes. Con IPv6 no existe el concepto de "IP privada" como en IPv4 — todas las IPs IPv6 son globalmente únicas, por eso se necesita este gateway.</p>
+    </div>
+
+    <div class="exam-alert" style="margin-top:24px">
+        <h4>🎯 Pregunta trampa clásica del examen</h4>
+        <ul>
+            <li><strong>P:</strong> "¿Qué necesita una instancia EC2 en subred pública para conectarse a internet?"</li>
+            <li><strong>R correcta:</strong> <span style="color:#F59E0B">Internet Gateway</span> (+ IP pública + ruta en tabla de rutas)</li>
+            <li style="margin-top:8px"><strong>P:</strong> "¿Qué necesita una instancia privada para actualizar paquetes sin ser accesible desde internet?"</li>
+            <li><strong>R correcta:</strong> <span style="color:#F59E0B">NAT Gateway</span> (en subred pública) + ruta en tabla de rutas de la subred privada</li>
+        </ul>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SECCIÓN 5: CONECTIVIDAD                        -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="section-connectivity" class="section">
+    <div class="section-title">Task 3.1 / Opciones de Conectividad</div>
+    <h2 class="section-heading">Conectividad de red con AWS</h2>
+
+    <p style="margin-bottom:28px; color:var(--text-muted)">Tres formas principales de conectar tu red local (o usuarios) con los servicios de AWS. Cada una tiene casos de uso, ventajas y limitaciones distintas.</p>
+
+    <div style="display:grid; gap:24px;">
+
+        <!-- INTERNET PÚBLICO -->
+        <div class="connect-card">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px">
+                <h4>🌐 Internet Público</h4>
+                <div>
+                    <span class="tag green">Siempre disponible</span>
+                    <span class="tag">Menor costo</span>
+                    <span class="tag" style="background:#FEE2E2; color:#991B1B">Menor seguridad</span>
+                </div>
+            </div>
+            <div class="grid-2" style="margin-top:16px">
+                <div>
+                    <p style="font-size:0.9em; margin-bottom:12px">Acceso a servicios AWS a través de la red pública de internet. Los servicios públicos de AWS (S3, APIs, etc.) son accesibles directamente.</p>
+                    <div class="pros-cons">
+                        <div class="pros">
+                            <h5>✓ CUÁNDO USAR</h5>
+                            <ul>
+                                <li>Acceso desde cualquier lugar</li>
+                                <li>Servicios AWS públicos (S3, APIs)</li>
+                                <li>Aplicaciones públicas</li>
+                                <li>Sin inversión adicional</li>
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <h5>✗ LIMITACIONES</h5>
+                            <ul>
+                                <li>Tráfico no cifrado sin HTTPS</li>
+                                <li>Latencia variable</li>
+                                <li>Riesgo de seguridad</li>
+                                <li>Sin SLA de red</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="code-block" style="font-size:0.8em; align-self:start">
+Usuario → Internet Público → AWS
+━━━━━━━━━━━━━━━━━━━━━━━━
+👤 Usuario en casa
+    ↓ HTTPS
+🌐 Internet
+    ↓
+📦 S3, CloudFront, API Gateway
+    (Servicios en AWS Public Zone)
+                </div>
+            </div>
+        </div>
+
+        <!-- AWS VPN -->
+        <div class="connect-card" style="border-color: var(--aws-orange)">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px">
+                <h4 style="color: var(--aws-dark)">🔐 AWS VPN (Virtual Private Network)</h4>
+                <div>
+                    <span class="tag orange">Cifrado</span>
+                    <span class="tag orange">Rápido de implementar</span>
+                    <span class="tag" style="background:#FEE2E2; color:#991B1B">Internet subyacente</span>
+                </div>
+            </div>
+            <div class="grid-2" style="margin-top:16px">
+                <div>
+                    <p style="font-size:0.9em; margin-bottom:12px">Túnel cifrado sobre internet que conecta tu red local con tu VPC en AWS. Existen dos tipos:</p>
+                    <ul style="margin-left:18px; font-size:0.88em; margin-bottom:14px">
+                        <li><strong>Site-to-Site VPN:</strong> Conecta tu CPD/oficina con AWS VPC. Requiere un Customer Gateway (router físico).</li>
+                        <li><strong>Client VPN:</strong> Conecta dispositivos individuales (portátiles, móviles) con AWS VPC. Para empleados remotos.</li>
+                    </ul>
+                    <div class="pros-cons">
+                        <div class="pros">
+                            <h5>✓ VENTAJAS</h5>
+                            <ul>
+                                <li>Cifrado automático (IPsec)</li>
+                                <li>Fácil de configurar</li>
+                                <li>Costo bajo</li>
+                                <li>Disponible en minutos</li>
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <h5>✗ LIMITACIONES</h5>
+                            <ul>
+                                <li>Depende de internet</li>
+                                <li>Latencia variable</li>
+                                <li>Ancho de banda limitado</li>
+                                <li>Sin SLA garantizado</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="code-block" style="font-size:0.8em; align-self:start">
+Site-to-Site VPN
+━━━━━━━━━━━━━━━━━━━━━━━━
+🏢 Tu data center
+  [Customer Gateway]
+      ↓ Túnel IPsec cifrado
+      ↓ (sobre internet)
+      ↓
+  [Virtual Private Gateway]
+   VPC en AWS (zona privada)
+   └─ EC2, RDS, etc.
+
+Client VPN
+━━━━━━━━━━━━━━━━━━━━━━━━
+💻 Portátil del empleado
+      ↓ TLS cifrado
+      ↓ (internet)
+      ↓
+   VPC en AWS
+                </div>
+            </div>
+        </div>
+
+        <!-- DIRECT CONNECT -->
+        <div class="connect-card" style="border-color: var(--aws-blue)">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px">
+                <h4 style="color: var(--aws-dark)">⚡ AWS Direct Connect (DX)</h4>
+                <div>
+                    <span class="tag blue">Conexión dedicada</span>
+                    <span class="tag blue">Alta velocidad</span>
+                    <span class="tag blue">Baja latencia</span>
+                    <span class="tag" style="background:#FEE2E2; color:#991B1B">Alto costo</span>
+                    <span class="tag" style="background:#FEE2E2; color:#991B1B">Meses para provisionar</span>
+                </div>
+            </div>
+            <div class="grid-2" style="margin-top:16px">
+                <div>
+                    <p style="font-size:0.9em; margin-bottom:12px"><strong>Conexión física privada dedicada</strong> entre tu red y AWS. No usa internet público. Velocidades de 1 Gbps a 100 Gbps.</p>
+                    <div class="analogy">
+                        <strong>Analogía:</strong> Tener una autopista privada directa a AWS en lugar de usar la carretera pública (internet). Más cara, pero sin atascos ni semáforos.
+                    </div>
+                    <div class="pros-cons" style="margin-top:12px">
+                        <div class="pros">
+                            <h5>✓ VENTAJAS</h5>
+                            <ul>
+                                <li>Latencia predecible</li>
+                                <li>Ancho de banda alto</li>
+                                <li>Sin internet (+ seguro)</li>
+                                <li>Reducción coste datos</li>
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <h5>✗ LIMITACIONES</h5>
+                            <ul>
+                                <li>Caro (hardware + operador)</li>
+                                <li>Tarda semanas/meses</li>
+                                <li>Sin cifrado nativo</li>
+                                <li>Un punto de fallo físico</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="code-block" style="font-size:0.8em; align-self:start">
+Direct Connect
+━━━━━━━━━━━━━━━━━━━━━━━━
+🏢 Tu data center
+      ↓ Fibra dedicada
+      ↓ (SIN internet)
+   [AWS Direct Connect Location]
+      ↓ (AWS backbone privado)
+      ↓
+   VPC / Servicios AWS
+
+⚡ Keyword clave del examen:
+   "dedicated connection" = Direct Connect
+
+Velocidades disponibles:
+  1 Gbps | 10 Gbps | 100 Gbps
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLA COMPARATIVA -->
+    <h3 style="margin:32px 0 16px; font-size:1.15em; color:var(--aws-dark)">Comparativa rápida — Tabla de decisión</h3>
+    <div class="matrix-wrap">
+        <table class="decision-table">
+            <thead>
+                <tr>
+                    <th>Criterio</th>
+                    <th>Internet Público</th>
+                    <th>AWS VPN</th>
+                    <th>Direct Connect</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>¿Pasa por internet?</strong></td>
+                    <td class="check">Sí</td>
+                    <td class="check">Sí (pero cifrado)</td>
+                    <td class="cross">No (privado)</td>
+                </tr>
+                <tr>
+                    <td><strong>¿Está cifrado?</strong></td>
+                    <td class="cross">Solo si usas HTTPS</td>
+                    <td class="check">Siempre (IPsec)</td>
+                    <td class="neutral">No nativo (añadir VPN encima)</td>
+                </tr>
+                <tr>
+                    <td><strong>Tiempo de configuración</strong></td>
+                    <td class="check">Inmediato</td>
+                    <td class="check">Minutos-Horas</td>
+                    <td class="cross">Semanas-Meses</td>
+                </tr>
+                <tr>
+                    <td><strong>Costo</strong></td>
+                    <td class="check">Muy bajo</td>
+                    <td class="check">Bajo</td>
+                    <td class="cross">Alto (hardware + operador)</td>
+                </tr>
+                <tr>
+                    <td><strong>Ancho de banda</strong></td>
+                    <td class="neutral">Variable (internet)</td>
+                    <td class="neutral">Limitado (~1.25 Gbps)</td>
+                    <td class="check">1-100 Gbps</td>
+                </tr>
+                <tr>
+                    <td><strong>Latencia</strong></td>
+                    <td class="neutral">Variable</td>
+                    <td class="neutral">Variable</td>
+                    <td class="check">Predecible y baja</td>
+                </tr>
+                <tr>
+                    <td><strong>Caso de uso típico</strong></td>
+                    <td>Apps públicas, acceso general</td>
+                    <td>Hybrid env. seguro, teletrabajo</td>
+                    <td>Grandes volúmenes datos, cumplimiento</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SECCIÓN 6: EXAMEN                              -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="section-exam" class="section">
+    <div class="section-title">CLF-C02 / Preparación Examen</div>
+    <h2 class="section-heading">🎯 Preguntas tipo examen</h2>
+
+    <p style="margin-bottom:28px; color:var(--text-muted)">Haz clic en cada pregunta para ver la respuesta y la explicación.</p>
+
+    <!-- Q1 -->
+    <div class="qa-block">
+        <div class="qa-q" onclick="toggleQA(this)">Una empresa quiere crear un entorno de pruebas idéntico al de producción cada vez que el equipo de QA lo necesite. ¿Cuál es la solución más adecuada?</div>
+        <div class="qa-a">
+            <p class="qa-correct">✅ Usar Infrastructure as Code (IaC) con AWS CloudFormation</p>
+            <p style="margin-top:10px; font-size:0.92em">El escenario pide un proceso <strong>repetible</strong> y <strong>consistente</strong>. La Management Console no garantiza reproducibilidad. La CLI podría funcionar pero sin gestión de dependencias ni rollback. CloudFormation permite definir el entorno completo como código, desplegarlo en minutos y destruirlo cuando no se necesite, ahorrando costos.</p>
+        </div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="qa-block">
+        <div class="qa-q" onclick="toggleQA(this)">¿Cuál de los siguientes describe mejor la diferencia entre AWS Site-to-Site VPN y AWS Direct Connect?</div>
+        <div class="qa-a">
+            <p class="qa-correct">✅ Site-to-Site VPN usa internet cifrado; Direct Connect usa una conexión privada dedicada sin internet</p>
+            <p style="margin-top:10px; font-size:0.92em">La palabra clave de Direct Connect en el examen es <strong>"dedicated connection"</strong> (conexión dedicada). VPN siempre pasa por internet, aunque esté cifrado. DX nunca usa internet público.</p>
+        </div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="qa-block">
+        <div class="qa-q" onclick="toggleQA(this)">Una empresa usa AWS junto con su data center local conectados mediante Direct Connect. ¿Cómo se clasifica este entorno?</div>
+        <div class="qa-a">
+            <p class="qa-correct">✅ Hybrid Environment (entorno híbrido), NO Hybrid Cloud</p>
+            <p style="margin-top:10px; font-size:0.92em">El data center local NO es cloud (no cumple los criterios de cloud computing). Por tanto, AWS + data center = hybrid environment. Hybrid Cloud requeriría que el data center local fuera una nube privada (como AWS Outposts) que cumpliera criterios cloud.</p>
+        </div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="qa-block">
+        <div class="qa-q" onclick="toggleQA(this)">¿Qué tipo de gateway necesita una instancia EC2 en una subred privada para descargar actualizaciones de software desde internet SIN ser accesible desde internet?</div>
+        <div class="qa-a">
+            <p class="qa-correct">✅ NAT Gateway (ubicado en una subred pública)</p>
+            <p style="margin-top:10px; font-size:0.92em">El NAT Gateway permite tráfico de <strong>salida</strong> (outbound) desde subredes privadas hacia internet, pero bloquea las conexiones <strong>entrantes</strong> (inbound). Él mismo vive en una subred pública y usa el Internet Gateway. No se necesita Internet Gateway directamente en la subred privada.</p>
+        </div>
+    </div>
+
+    <!-- Q5 -->
+    <div class="qa-block">
+        <div class="qa-q" onclick="toggleQA(this)">Un desarrollador quiere integrar operaciones de Amazon S3 directamente en su aplicación Python. ¿Cuál es la mejor opción?</div>
+        <div class="qa-a">
+            <p class="qa-correct">✅ AWS SDK para Python (Boto3)</p>
+            <p style="margin-top:10px; font-size:0.92em">Los SDKs son la opción correcta cuando se quiere <strong>integrar</strong> AWS en una aplicación. La CLI sirve para scripts de terminal, no para integrar en código de aplicación. La Management Console es gráfica. Boto3 abstrae la complejidad de las APIs directas y gestiona la autenticación automáticamente.</p>
+        </div>
+    </div>
+
+    <!-- Q6 -->
+    <div class="qa-block">
+        <div class="qa-q" onclick="toggleQA(this)">¿Cuál es la definición correcta de un servicio "público" de AWS según la arquitectura de red de AWS?</div>
+        <div class="qa-a">
+            <p class="qa-correct">✅ Un servicio que puede ser accedido desde cualquier lugar con conexión a internet (como Amazon S3)</p>
+            <p style="margin-top:10px; font-size:0.92em">"Público" en AWS se refiere a la <strong>conectividad de red</strong>, no a si el servicio requiere credenciales. Amazon S3 es un servicio público: se accede por internet, pero requiere autenticación. Amazon EC2 en una subred privada es un servicio privado: sin acceso directo desde internet.</p>
+        </div>
+    </div>
+
+    <!-- Q7 -->
+    <div class="qa-block">
+        <div class="qa-q" onclick="toggleQA(this)">Una empresa necesita migrar 50TB de datos a AWS regularmente con bajo costo de transferencia y alta velocidad. ¿Qué opción de conectividad es la más adecuada?</div>
+        <div class="qa-a">
+            <p class="qa-correct">✅ AWS Direct Connect</p>
+            <p style="margin-top:10px; font-size:0.92em">Para <strong>grandes volúmenes de datos</strong> con necesidad de <strong>alta velocidad y bajo costo por GB</strong>, Direct Connect es superior. También ofrece latencia predecible. Si el volumen fuera masivo y puntual (petabytes), podría considerarse AWS Snowball, pero para transferencias regulares, DX es la solución.</p>
+        </div>
+    </div>
+
+    <!-- Q8 -->
+    <div class="qa-block">
+        <div class="qa-q" onclick="toggleQA(this)">¿Cuál de estos NO es un método de acceso a servicios AWS?</div>
+        <div class="qa-a">
+            <p class="qa-correct">✅ La respuesta depende de las opciones del examen, pero típicamente incluirán "FTP" o "SFTP" o "Telnet" como distractor incorrecto</p>
+            <p style="margin-top:10px; font-size:0.92em">Los métodos de acceso a AWS son: <strong>API REST, SDK, CLI y Management Console</strong>. Todo lo demás (FTP, Telnet, SFTP) no son métodos de acceso a los servicios AWS en sí.</p>
+        </div>
+    </div>
+
+    <!-- RESUMEN CONCEPTOS CLAVE -->
+    <div class="exam-alert" style="margin-top:32px">
+        <h4>📝 Conceptos clave a memorizar para el examen</h4>
+        <ul>
+            <li><strong>CloudFormation</strong> = IaC nativo de AWS</li>
+            <li><strong>SDK</strong> = integrar AWS en tu aplicación</li>
+            <li><strong>CLI</strong> = automatizar con scripts, operaciones en terminal</li>
+            <li><strong>Console</strong> = exploración, operaciones únicas, visualización</li>
+            <li><strong>Direct Connect</strong> = "dedicated connection" = no usa internet</li>
+            <li><strong>VPN</strong> = cifrado, sí usa internet</li>
+            <li><strong>Internet Gateway</strong> = tráfico bidireccional para subredes públicas</li>
+            <li><strong>NAT Gateway</strong> = solo salida, para subredes privadas</li>
+            <li><strong>Hybrid Cloud ≠ Hybrid Environment</strong> (confusión frecuente)</li>
+            <li><strong>AWS Outposts</strong> = hardware AWS en tu CPD = private cloud / hybrid cloud</li>
+        </ul>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SECCIÓN 7: TALLER PRÁCTICO                    -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="section-workshop" class="section">
+    <div class="section-title">Task 3.1 / Taller Práctico</div>
+    <h2 class="section-heading">🛠 Talleres y actividades prácticas</h2>
+
+    <div class="curriculum">
+        <h4>📚 RA cubiertos en estas actividades</h4>
+        <ul>
+            <li><strong>RA3e:</strong> Scripts y herramientas para configuración automática (CloudFormation, Terraform)</li>
+            <li><strong>RA3f:</strong> Automatización de tareas de mantenimiento y gestión</li>
+            <li><strong>RA1c:</strong> Análisis de casos de uso para cada modelo de servicio</li>
+            <li><strong>RA6e:</strong> Herramientas de monitoreo (CloudWatch, CLI describe)</li>
+        </ul>
+    </div>
+
+    <!-- TALLER 1 -->
+    <div class="workshop">
+        <h3>🔧 TALLER 1 — Los 4 métodos de acceso a S3 (1 tarea, 4 herramientas)</h3>
+        <p style="font-size:0.9em; margin-bottom:16px; color:#CBD5E0">Objetivo: Crear un bucket S3 y subir un archivo con los 4 métodos distintos. Contrastar la experiencia.</p>
+        <ol>
+            <li><strong>Management Console:</strong> Accede a console.aws.amazon.com → S3 → "Create bucket". Nombre: <code>mi-bucket-consola-[tunombre]</code>. Sube un archivo con drag&drop.</li>
+            <li><strong>CLI:</strong> Configura credenciales con <code>aws configure</code>. Ejecuta <code>aws s3 mb s3://mi-bucket-cli-[tunombre] --region eu-west-1</code>. Sube con <code>aws s3 cp archivo.txt s3://mi-bucket-cli-[tunombre]/</code></li>
+            <li><strong>SDK Python (Boto3):</strong> Instala con <code>pip install boto3</code>. Escribe un script Python que cree un bucket y suba un objeto. Ejecuta el script.</li>
+            <li><strong>CloudFormation (IaC):</strong> Crea un template YAML con un recurso <code>AWS::S3::Bucket</code>. Despliégalo con <code>aws cloudformation deploy --template-file s3.yaml --stack-name mi-stack</code></li>
+        </ol>
+        <p style="margin-top:16px; font-size:0.85em; color:#A0AEC0">🗣 <strong>Reflexión para clase:</strong> "¿Cuál fue más rápido? ¿Cuál escalaría mejor a 100 buckets? ¿Cuál deja trazabilidad?"</p>
+    </div>
+
+    <!-- TALLER 2 -->
+    <div class="workshop">
+        <h3>🔧 TALLER 2 — VPC: Subredes públicas y privadas con gateways</h3>
+        <p style="font-size:0.9em; margin-bottom:16px; color:#CBD5E0">Objetivo: Crear una VPC con subredes pública y privada. Verificar la diferencia de conectividad.</p>
+        <ol>
+            <li>Crear VPC con CIDR <code>10.0.0.0/16</code> en la consola</li>
+            <li>Crear subred pública: <code>10.0.1.0/24</code> y subred privada: <code>10.0.2.0/24</code></li>
+            <li>Crear y adjuntar un <strong>Internet Gateway</strong> a la VPC</li>
+            <li>Modificar la tabla de rutas de la subred pública: añadir ruta <code>0.0.0.0/0 → IGW</code></li>
+            <li>Crear un <strong>NAT Gateway</strong> en la subred pública (con Elastic IP)</li>
+            <li>Modificar la tabla de rutas de la subred privada: añadir ruta <code>0.0.0.0/0 → NAT GW</code></li>
+            <li>Lanzar EC2 en subred pública (con IP pública) y otra en subred privada</li>
+            <li>Verificar: EC2 pública puede hacer ping a internet. EC2 privada puede hacer <code>curl google.com</code> pero no es accesible desde internet.</li>
+        </ol>
+        <p style="margin-top:16px; font-size:0.85em; color:#A0AEC0">🔗 <strong>Conecta con IaC:</strong> Tras hacerlo manual, mostrar el CloudFormation equivalente. "Esto nos ha llevado 30 minutos manualmente. El template tarda 3 minutos."</p>
+    </div>
+
+    <!-- TALLER 3 -->
+    <div class="workshop">
+        <h3>🔧 TALLER 3 — Mi primera infraestructura con Terraform (IaC)</h3>
+        <p style="font-size:0.9em; margin-bottom:16px; color:#CBD5E0">Objetivo: Provisionar infraestructura básica (VPC + subred + EC2) con Terraform. Experimentar el ciclo plan/apply/destroy.</p>
+        <ol>
+            <li>Instalar Terraform: <code>sudo apt install terraform</code> o descarga desde terraform.io</li>
+            <li>Configurar credenciales AWS: <code>aws configure</code> o variables de entorno</li>
+            <li>Crear directorio del proyecto y archivo <code>main.tf</code> con provider AWS y recurso VPC</li>
+            <li>Ejecutar <code>terraform init</code> → descarga el provider de AWS</li>
+            <li>Ejecutar <code>terraform plan</code> → ver qué va a crear (sin tocar nada aún)</li>
+            <li>Ejecutar <code>terraform apply</code> → confirmar con <code>yes</code> → infra creada</li>
+            <li>Modificar el CIDR de la subred en el .tf → <code>terraform plan</code> → ver el diff</li>
+            <li>Ejecutar <code>terraform destroy</code> → limpiar todo. Contrastar con borrado manual.</li>
+        </ol>
+        <p style="margin-top:16px; font-size:0.85em; color:#A0AEC0">💡 <strong>Debate:</strong> "¿Por qué Terraform tiene un <code>plan</code> antes del <code>apply</code>? ¿Qué analogía tiene con git diff?"</p>
+    </div>
+
+    <!-- ACTIVIDAD DEBATE -->
+    <div class="card orange" style="margin-top:24px">
+        <div class="card-title"><span class="icon">💬</span> Actividad de debate — Elige el modelo</div>
+        <p style="font-size:0.9em; margin-bottom:14px">Presenta a tus alumnos estos 3 escenarios. Cada grupo debe elegir el modelo de despliegue y método de acceso más adecuado y justificarlo:</p>
+        <ol style="margin-left:20px; font-size:0.9em">
+            <li style="margin-bottom:10px"><strong>Startup de comercio electrónico</strong> con 5 desarrolladores que necesita escalar rápido, sin capital inicial y con tráfico impredecible. ¿Qué modelo de nube? ¿CLI, console o IaC?</li>
+            <li style="margin-bottom:10px"><strong>Hospital público</strong> con datos clínicos que deben cumplir regulaciones de la UE, no pueden salir del territorio nacional, y tienen un equipo IT de 50 personas. ¿Qué modelo? ¿Qué conectividad con AWS?</li>
+            <li style="margin-bottom:10px"><strong>Banco</strong> que usa un mainframe on-premises legacy y quiere modernizar gradualmente, añadiendo nuevos servicios en AWS sin migrar el mainframe. ¿Hybrid cloud o hybrid environment? ¿VPN o Direct Connect?</li>
+        </ol>
+    </div>
+
+    <!-- RECURSOS -->
+    <h3 style="margin:32px 0 16px; font-size:1.15em; color:var(--aws-dark)">📚 Recursos para profundizar</h3>
+    <div class="grid-3">
+        <div class="card" style="font-size:0.88em">
+            <div class="card-title" style="font-size:1em">🎓 AWS Skill Builder</div>
+            <p>Laboratorios gratuitos de AWS. Busca "AWS Cloud Practitioner Essentials" para práctica guiada.</p>
+        </div>
+        <div class="card" style="font-size:0.88em">
+            <div class="card-title" style="font-size:1em">📖 Documentación CloudFormation</div>
+            <p>docs.aws.amazon.com/cloudformation · Ejemplos de templates listos para usar en clase.</p>
+        </div>
+        <div class="card" style="font-size:0.88em">
+            <div class="card-title" style="font-size:1em">🌍 Terraform Registry</div>
+            <p>registry.terraform.io · Módulos de AWS pre-construidos. Excelente para mostrar IaC real.</p>
+        </div>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+    <p>Task Statement 3.1 · AWS Certified Cloud Practitioner CLF-C02</p>
+    <p style="margin-top:6px">Elaborado para <span>IYC Cloud</span> · Módulo Optativo Computación en la Nube</p>
+</div>
+
+<script>
+    function show(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('section-' + id).classList.add('active');
+        event.target.classList.add('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function toggleQA(el) {
+        el.classList.toggle('open');
+        const answer = el.nextElementSibling;
+        answer.classList.toggle('open');
+    }
+</script>
+
+</body>
+</html>

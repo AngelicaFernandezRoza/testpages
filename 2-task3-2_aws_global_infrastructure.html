@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task 3.2 · AWS Global Infrastructure</title>
+  <style>
+    /* ─── DESIGN TOKENS ─────────────────────────────────────────── */
+    :root {
+      --aws-orange:   #FF9900;
+      --aws-dark:     #232F3E;
+      --aws-blue:     #1A73E8;
+      --region-color: #147EB3;
+      --az-color:     #D97706;
+      --edge-color:   #7C3AED;
+      --global-color: #16A34A;
+      --zonal-color:  #DC2626;
+
+      --bg:           #F8F7F4;
+      --surface:      #FFFFFF;
+      --muted:        #6B7280;
+      --text:         #1C1917;
+      --border:       #E5E7EB;
+
+      --radius:       12px;
+      --shadow:       0 2px 12px rgba(0,0,0,.08);
+      --shadow-lg:    0 8px 32px rgba(0,0,0,.13);
+    }
+
+    /* ─── RESET & BASE ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+
+    /* ─── HERO ───────────────────────────────────────────────────── */
+    .hero {
+      background: var(--aws-dark);
+      color: #fff;
+      padding: 56px 40px 48px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      right: -80px; top: -80px;
+      width: 420px; height: 420px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,153,0,.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--aws-orange);
+      margin-bottom: 14px;
+    }
+    .hero h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      line-height: 1.15;
+      max-width: 640px;
+    }
+    .hero h1 span { color: var(--aws-orange); }
+    .hero-sub {
+      margin-top: 16px;
+      font-size: 1rem;
+      color: #CBD5E1;
+      max-width: 560px;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 20px;
+      margin-top: 28px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 99px;
+      padding: 5px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #E2E8F0;
+    }
+    .pill.orange { background: rgba(255,153,0,.18); border-color: rgba(255,153,0,.4); color: var(--aws-orange); }
+
+    /* ─── LAYOUT ─────────────────────────────────────────────────── */
+    .page { max-width: 1100px; margin: 0 auto; padding: 0 32px; }
+    section { padding: 60px 0 20px; }
+    section + section { border-top: 1px solid var(--border); padding-top: 52px; }
+
+    /* ─── SECTION HEADERS ────────────────────────────────────────── */
+    .sec-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--aws-orange);
+      margin-bottom: 8px;
+    }
+    .sec-title {
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: var(--aws-dark);
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    .sec-intro {
+      color: var(--muted);
+      max-width: 680px;
+      margin-bottom: 36px;
+    }
+
+    /* ─── CARDS ─────────────────────────────────────────────────── */
+    .cards { display: grid; gap: 20px; }
+    .cards-3 { grid-template-columns: repeat(3, 1fr); }
+    .cards-2 { grid-template-columns: repeat(2, 1fr); }
+    .cards-4 { grid-template-columns: repeat(4, 1fr); }
+
+    .card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      position: relative;
+      transition: transform .18s, box-shadow .18s;
+    }
+    .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+
+    .card-accent {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .accent-region { background: var(--region-color); }
+    .accent-az     { background: var(--az-color); }
+    .accent-edge   { background: var(--edge-color); }
+    .accent-global { background: var(--global-color); }
+    .accent-zonal  { background: var(--zonal-color); }
+    .accent-orange { background: var(--aws-orange); }
+    .accent-blue   { background: var(--aws-blue); }
+
+    .card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card p, .card li { font-size: .9rem; color: #374151; line-height: 1.6; }
+    .card ul { margin-left: 18px; margin-top: 6px; }
+    .card li { margin-bottom: 4px; }
+
+    /* ─── ANALOGY BOX ───────────────────────────────────────────── */
+    .analogy {
+      background: #FFF7ED;
+      border: 1.5px solid #FED7AA;
+      border-left: 5px solid var(--aws-orange);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin: 18px 0;
+      font-size: .9rem;
+    }
+    .analogy strong { color: #92400E; }
+
+    /* ─── HIERARCHY DIAGRAM ─────────────────────────────────────── */
+    .hierarchy {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      box-shadow: var(--shadow);
+      margin-bottom: 32px;
+    }
+    .h-level {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      margin-bottom: 0;
+    }
+    .h-indent { width: 40px; flex-shrink: 0; position: relative; }
+    .h-indent::before {
+      content: '';
+      position: absolute;
+      left: 18px; top: 0; bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+    .h-indent.last::before { height: 50%; bottom: auto; }
+    .h-connector {
+      position: absolute;
+      left: 18px; top: 50%;
+      width: 22px; height: 2px;
+      background: var(--border);
+    }
+    .h-box {
+      flex: 1;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 6px 0;
+      border: 2px solid;
+      font-size: .88rem;
+      position: relative;
+    }
+    .h-box.l0 { border-color: #232F3E; background: #232F3E; color: #fff; font-weight: 800; font-size: 1rem; }
+    .h-box.l1 { border-color: var(--region-color); background: #EFF6FF; }
+    .h-box.l2 { border-color: var(--az-color);     background: #FFFBEB; }
+    .h-box.l3 { border-color: #94A3B8;              background: #F8FAFC; font-size: .82rem; }
+
+    .h-box strong { display: block; font-weight: 700; font-size: .95em; margin-bottom: 3px; }
+    .h-box span { color: var(--muted); font-size: .82em; }
+
+    /* ─── RESILIENCE DIAGRAM ─────────────────────────────────────── */
+    .resilience-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .res-card {
+      border-radius: var(--radius);
+      padding: 22px 20px;
+      text-align: center;
+      border: 2px solid;
+    }
+    .res-card.global { border-color: var(--global-color); background: #F0FDF4; }
+    .res-card.regional { border-color: var(--region-color); background: #EFF6FF; }
+    .res-card.zonal { border-color: var(--zonal-color); background: #FEF2F2; }
+    .res-card .icon-big { font-size: 2rem; margin-bottom: 10px; }
+    .res-card h4 { font-size: .95rem; font-weight: 700; margin-bottom: 8px; }
+    .res-card.global h4 { color: var(--global-color); }
+    .res-card.regional h4 { color: var(--region-color); }
+    .res-card.zonal h4 { color: var(--zonal-color); }
+    .res-card p { font-size: .83rem; color: #374151; line-height: 1.55; }
+    .res-card .svc-list {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      justify-content: center;
+    }
+    .tag {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 99px;
+      font-size: .75rem;
+      font-weight: 600;
+    }
+    .tag.g { background: #DCFCE7; color: #15803D; }
+    .tag.r { background: #DBEAFE; color: #1D4ED8; }
+    .tag.z { background: #FEE2E2; color: #B91C1C; }
+
+    /* ─── COMPARISON TABLE ──────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; margin: 24px 0 32px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    thead tr { background: var(--aws-dark); }
+    th {
+      padding: 13px 16px;
+      text-align: left;
+      font-size: .82rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    td {
+      padding: 11px 16px;
+      font-size: .87rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background: #FAFAFA; }
+    tr:last-child td { border-bottom: none; }
+    td:first-child { font-weight: 600; color: var(--aws-dark); }
+
+    /* ─── EXAM TIPS ─────────────────────────────────────────────── */
+    .exam-section {
+      background: #1E1B4B;
+      border-radius: var(--radius);
+      padding: 32px;
+      color: #E2E8F0;
+      margin: 32px 0;
+    }
+    .exam-section h3 {
+      color: #A5B4FC;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .exam-q {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 8px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+    }
+    .exam-q p { font-size: .88rem; line-height: 1.6; }
+    .exam-q .q { color: #C7D2FE; font-weight: 600; margin-bottom: 8px; }
+    .exam-q .a { color: #86EFAC; }
+    .exam-q .wrong { color: #FCA5A5; }
+
+    /* ─── CLOUDFRONT VS GLOBAL ACCEL ────────────────────────────── */
+    .vs-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0;
+      align-items: start;
+      margin: 24px 0;
+    }
+    .vs-side {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+    .vs-side h3 { font-size: .95rem; font-weight: 700; margin-bottom: 12px; }
+    .vs-side.cf h3 { color: var(--edge-color); }
+    .vs-side.ga h3 { color: var(--region-color); }
+    .vs-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: var(--muted);
+    }
+    .vs-row { font-size: .83rem; margin-bottom: 8px; display: flex; gap: 8px; }
+    .vs-row::before { content: '▸'; opacity: .5; flex-shrink: 0; }
+
+    /* ─── REGION SELECTOR ───────────────────────────────────────── */
+    .criteria-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-top: 20px;
+    }
+    .criteria-item {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .criteria-num {
+      background: var(--aws-dark);
+      color: var(--aws-orange);
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: .85rem;
+      flex-shrink: 0;
+    }
+    .criteria-item h4 { font-size: .88rem; font-weight: 700; margin-bottom: 4px; }
+    .criteria-item p  { font-size: .82rem; color: var(--muted); }
+
+    /* ─── CALLOUT ────────────────────────────────────────────────── */
+    .callout {
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin: 20px 0;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .callout.info  { background: #EFF6FF; border: 1.5px solid #BFDBFE; }
+    .callout.warn  { background: #FFFBEB; border: 1.5px solid #FDE68A; }
+    .callout.tip   { background: #F0FDF4; border: 1.5px solid #BBF7D0; }
+    .callout .icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
+    .callout p     { font-size: .88rem; line-height: 1.6; }
+    .callout strong { display: block; margin-bottom: 4px; font-size: .9rem; }
+
+    /* ─── FOOTER ─────────────────────────────────────────────────── */
+    footer {
+      background: var(--aws-dark);
+      color: #94A3B8;
+      text-align: center;
+      padding: 32px;
+      margin-top: 60px;
+      font-size: .83rem;
+    }
+    footer strong { color: var(--aws-orange); }
+
+    /* ─── NAV TABS ──────────────────────────────────────────────── */
+    .nav-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 20px 32px 0;
+      background: var(--aws-dark);
+      overflow-x: auto;
+    }
+    .nav-tab {
+      background: rgba(255,255,255,.08);
+      color: #CBD5E1;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 8px 8px 0 0;
+      font-size: .8rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s, color .15s;
+    }
+    .nav-tab.active, .nav-tab:hover {
+      background: var(--aws-orange);
+      color: var(--aws-dark);
+    }
+
+    /* ─── CODE BLOCK ─────────────────────────────────────────────── */
+    .code-block {
+      background: #0F172A;
+      color: #E2E8F0;
+      border-radius: 8px;
+      padding: 18px 20px;
+      font-family: 'Consolas', 'Fira Code', monospace;
+      font-size: .83rem;
+      line-height: 1.7;
+      overflow-x: auto;
+      margin: 16px 0;
+    }
+    .code-block .comment { color: #64748B; }
+    .code-block .key     { color: #7DD3FC; }
+    .code-block .val     { color: #86EFAC; }
+    .code-block .orange  { color: var(--aws-orange); }
+
+    /* ─── RESPONSIVE ─────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .cards-3 { grid-template-columns: 1fr; }
+      .cards-4 { grid-template-columns: repeat(2, 1fr); }
+      .resilience-grid { grid-template-columns: 1fr; }
+      .vs-grid { grid-template-columns: 1fr; }
+      .vs-center { display: none; }
+      .criteria-grid { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 1.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ HERO ════════════════════════════════════════ -->
+<div class="hero">
+  <div class="page">
+    <p class="hero-eyebrow">CLF-C02 · Domain 3 · Task Statement 3.2</p>
+    <h1>AWS <span>Global</span><br>Infrastructure</h1>
+    <p class="hero-sub">
+      Regiones, Availability Zones y Edge Locations — la arquitectura
+      que lo sostiene todo, desde la alta disponibilidad hasta la soberanía de datos.
+    </p>
+    <div class="hero-meta">
+      <span class="pill orange">📋 34 % del examen CLF-C02</span>
+      <span class="pill">🎓 Domain 3 · Technology &amp; Cloud Services</span>
+      <span class="pill">📚 RA 3 — Módulo Computación en la Nube</span>
+      <span class="pill">⏱ ~90 min de clase</span>
+    </div>
+  </div>
+</div>
+
+<!-- NAV TABS (decorative anchors) -->
+<div class="nav-tabs page" style="padding-left:0;padding-right:0;max-width:100%">
+  <a href="#overview"    class="nav-tab active">🌍 Visión general</a>
+  <a href="#regions"     class="nav-tab">📍 Regiones</a>
+  <a href="#az"          class="nav-tab">🏢 Availability Zones</a>
+  <a href="#edge"        class="nav-tab">🏪 Edge Locations</a>
+  <a href="#resilience"  class="nav-tab">🛡 Resiliencia</a>
+  <a href="#cf-vs-ga"    class="nav-tab">⚡ CloudFront vs GA</a>
+  <a href="#exam"        class="nav-tab">🎯 Exam Tips</a>
+</div>
+
+<div class="page">
+
+<!-- ═══════════════ 1 · VISIÓN GENERAL ══════════════════════════ -->
+<section id="overview">
+  <p class="sec-label">Punto de partida</p>
+  <h2 class="sec-title">¿Qué es la infraestructura global de AWS?</h2>
+  <p class="sec-intro">
+    AWS construyó una red de infraestructuras distribuidas por todo el mundo
+    para garantizar baja latencia, alta disponibilidad y cumplimiento legal.
+    No es "un único servidor enorme": es un <strong>sistema de capas anidadas</strong>.
+  </p>
+
+  <div class="callout info">
+    <span class="icon">💡</span>
+    <p><strong>Analogía maestra</strong> — Piensa en AWS como una <em>cadena hotelera mundial</em>:
+    el <strong>país</strong> = Región · el <strong>edificio</strong> del hotel = Availability Zone ·
+    la <strong>tienda de conveniencia de barrio</strong> = Edge Location.
+    Cada nivel tiene su función y su nivel de fallo independiente.</p>
+  </div>
+
+  <!-- JERARQUÍA VISUAL -->
+  <div class="hierarchy">
+    <div style="display:flex; gap:0; flex-direction:column;">
+
+      <!-- NIVEL 0: AWS GLOBAL -->
+      <div style="margin-bottom:8px;">
+        <div class="h-box l0">
+          🌐 &nbsp;<strong style="display:inline">AWS Global Infrastructure</strong>
+          <span style="color:#94A3B8; font-size:.82rem; margin-left:12px;">Todo el mundo · 34+ Regiones · 100+ AZs · 400+ Edge Locations</span>
+        </div>
+      </div>
+
+      <!-- NIVEL 1: REGIÓN -->
+      <div style="display:flex; margin-bottom:8px;">
+        <div style="width:36px; flex-shrink:0; position:relative;">
+          <div style="position:absolute; left:12px; top:0; bottom:0; width:2px; background:var(--border);"></div>
+          <div style="position:absolute; left:12px; top:50%; width:24px; height:2px; background:var(--border);"></div>
+        </div>
+        <div class="h-box l1" style="flex:1;">
+          📍 <strong>Región</strong> — Área geográfica (p.ej. <em>eu-west-1</em>, <em>us-east-1</em>)
+          <span>· Mínimo 2 AZs · Soberanía de datos · Servicios a veces diferentes por Región</span>
+        </div>
+      </div>
+
+      <!-- NIVEL 2: AZ -->
+      <div style="display:flex; margin-bottom:8px; margin-left:36px;">
+        <div style="width:36px; flex-shrink:0; position:relative;">
+          <div style="position:absolute; left:12px; top:0; bottom:0; width:2px; background:var(--border);"></div>
+          <div style="position:absolute; left:12px; top:50%; width:24px; height:2px; background:var(--border);"></div>
+        </div>
+        <div class="h-box l2" style="flex:1;">
+          🏢 <strong>Availability Zone</strong> — 1+ Data Centers (p.ej. <em>eu-west-1a</em>)
+          <span>· Redundancia eléctrica y de red · Conectada a otras AZs con fibra de baja latencia</span>
+        </div>
+      </div>
+
+      <!-- NIVEL 3: DATA CENTER -->
+      <div style="display:flex; margin-left:72px; margin-bottom:8px;">
+        <div style="width:36px; flex-shrink:0; position:relative;">
+          <div style="position:absolute; left:12px; top:0; height:50%; width:2px; background:var(--border);"></div>
+          <div style="position:absolute; left:12px; top:50%; width:24px; height:2px; background:var(--border);"></div>
+        </div>
+        <div class="h-box l3" style="flex:1;">
+          🖥 <strong>Data Center</strong> — Servidores, switches, almacenamiento
+          <span>· Múltiples por AZ · Transparente para el usuario</span>
+        </div>
+      </div>
+
+      <!-- NIVEL EDGE (paralelo) -->
+      <div style="margin-top:16px; border-top:1px dashed var(--border); padding-top:16px;">
+        <div class="h-box" style="border:2px solid var(--edge-color); background:#F5F3FF; flex:1;">
+          🏪 <strong>Edge Locations / Points of Presence</strong> — ~400+ en ciudades del mundo
+          <span>· Caché de contenido · Usadas por CloudFront y Global Accelerator · No son AZs completas</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RESUMEN EN NÚMEROS -->
+  <div class="cards cards-4">
+    <div class="card" style="text-align:center;">
+      <div class="card-accent accent-region"></div>
+      <div style="font-size:2.2rem; font-weight:900; color:var(--region-color); margin:10px 0;">34+</div>
+      <div style="font-weight:700; color:var(--aws-dark);">Regiones</div>
+      <div style="font-size:.8rem; color:var(--muted); margin-top:6px;">En 6 continentes</div>
+    </div>
+    <div class="card" style="text-align:center;">
+      <div class="card-accent accent-az"></div>
+      <div style="font-size:2.2rem; font-weight:900; color:var(--az-color); margin:10px 0;">108+</div>
+      <div style="font-weight:700; color:var(--aws-dark);">Availability Zones</div>
+      <div style="font-size:.8rem; color:var(--muted); margin-top:6px;">Mín. 2 por Región (usual: 3)</div>
+    </div>
+    <div class="card" style="text-align:center;">
+      <div class="card-accent accent-edge"></div>
+      <div style="font-size:2.2rem; font-weight:900; color:var(--edge-color); margin:10px 0;">400+</div>
+      <div style="font-weight:700; color:var(--aws-dark);">Edge Locations</div>
+      <div style="font-size:.8rem; color:var(--muted); margin-top:6px;">Points of Presence (PoPs)</div>
+    </div>
+    <div class="card" style="text-align:center;">
+      <div class="card-accent accent-orange"></div>
+      <div style="font-size:2.2rem; font-weight:900; color:var(--aws-orange); margin:10px 0;">245+</div>
+      <div style="font-weight:700; color:var(--aws-dark);">Países y territorios</div>
+      <div style="font-size:.8rem; color:var(--muted); margin-top:6px;">Con servicios AWS</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════ 2 · REGIONES ════════════════════════════════ -->
+<section id="regions">
+  <p class="sec-label">Nivel 1</p>
+  <h2 class="sec-title">Regiones (Regions)</h2>
+  <p class="sec-intro">
+    Una Región es un área geográfica independiente donde AWS tiene
+    infraestructura completa. Cada Región es <em>soberana</em>: los datos
+    no salen de ella salvo que tú los muevas explícitamente.
+  </p>
+
+  <div class="analogy">
+    🌍 <strong>Analogía:</strong> Cada Región es como un <strong>país con sus propias leyes</strong>.
+    Los datos que están en "Francia" (eu-west-3) no cruzan la frontera a "Irlanda" (eu-west-1)
+    a menos que tú lo ordenes. Ideal para cumplir el GDPR o normativas bancarias.
+  </div>
+
+  <div class="callout warn">
+    <span class="icon">📌</span>
+    <p><strong>Dato clave para el examen:</strong> Los datos NO cruzan Regiones automáticamente. 
+    AWS tiene el compromiso de <em>data residency</em> — si tus datos están en eu-west-1, 
+    permanecen en eu-west-1 a menos que uses replicación cross-region explícita.</p>
+  </div>
+
+  <!-- CRITERIOS DE SELECCIÓN DE REGIÓN -->
+  <h3 style="font-size:1.05rem; font-weight:700; color:var(--aws-dark); margin-bottom:12px;">
+    ¿Cómo elegir una Región? — Los 4 criterios
+  </h3>
+  <div class="criteria-grid">
+    <div class="criteria-item">
+      <div class="criteria-num">1</div>
+      <div>
+        <h4>⚖️ Cumplimiento (Compliance)</h4>
+        <p>¿Existe regulación sobre dónde deben residir los datos?
+        GDPR → Región europea. Datos bancarios → Región local autorizada.
+        <strong>Siempre es el primer criterio a evaluar.</strong></p>
+      </div>
+    </div>
+    <div class="criteria-item">
+      <div class="criteria-num">2</div>
+      <div>
+        <h4>📡 Latencia (Proximidad al usuario)</h4>
+        <p>¿Dónde están tus usuarios finales?
+        Elegir la Región más cercana reduce la latencia de red.
+        Una app en España → eu-west-1 (Irlanda) o eu-south-1 (Milán).</p>
+      </div>
+    </div>
+    <div class="criteria-item">
+      <div class="criteria-num">3</div>
+      <div>
+        <h4>🛠 Disponibilidad de servicios</h4>
+        <p>No todos los servicios AWS están disponibles en todas las Regiones.
+        Verifica que el servicio que necesitas está en la Región elegida.
+        Los servicios nuevos se lanzan primero en us-east-1.</p>
+      </div>
+    </div>
+    <div class="criteria-item">
+      <div class="criteria-num">4</div>
+      <div>
+        <h4>💰 Precio</h4>
+        <p>Los precios varían entre Regiones. Normalmente us-east-1
+        es la más barata. Consulta la Calculadora de Precios de AWS
+        al comparar opciones.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOCAL ZONES Y WAVELENGTH -->
+  <h3 style="font-size:1.05rem; font-weight:700; color:var(--aws-dark); margin:32px 0 12px;">
+    Extensiones de Región: Local Zones &amp; AWS Wavelength
+  </h3>
+  <div class="cards cards-2">
+    <div class="card">
+      <div class="card-accent accent-region"></div>
+      <h3>📍 Local Zones</h3>
+      <p>Extensión de una Región en <strong>proximidad geográfica cercana</strong> a una gran ciudad.
+      Permiten ejecutar cargas de trabajo sensibles a la latencia cerca de usuarios finales
+      sin abrir una Región completa.</p>
+      <div class="analogy" style="margin-top:12px;">
+        🏙 Si la Región es Madrid, una Local Zone sería una pequeña antena
+        en Barcelona: mismas herramientas, menor latencia para Cataluña.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-accent accent-blue"></div>
+      <h3>📱 AWS Wavelength</h3>
+      <p>Infraestructura en ubicaciones de <strong>carriers de telecomunicaciones</strong> para
+      latencia ultra-baja. Pensado para aplicaciones móviles en redes 5G.
+      Cada "Wavelength Zone" está ligada a una Región AWS.</p>
+      <div class="callout tip" style="margin-top:12px;">
+        <span class="icon">🎯</span>
+        <p>Para el examen CLF-C02, <strong>no es prioritario</strong>.
+        Enfócate en Regiones, AZs y Edge Locations.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- EJEMPLOS REALES -->
+  <h3 style="font-size:1.05rem; font-weight:700; color:var(--aws-dark); margin:32px 0 12px;">
+    Regiones relevantes para España / Europa
+  </h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Código</th><th>Nombre</th><th>País</th><th>AZs</th><th>Relevancia</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>eu-west-1</td><td>Europa (Irlanda)</td><td>🇮🇪 Irlanda</td><td>3</td><td>La más antigua y con más servicios en Europa</td></tr>
+        <tr><td>eu-west-2</td><td>Europa (Londres)</td><td>🇬🇧 Reino Unido</td><td>3</td><td>Post-Brexit: cumplimiento UK</td></tr>
+        <tr><td>eu-west-3</td><td>Europa (París)</td><td>🇫🇷 Francia</td><td>3</td><td>GDPR francés / datos en suelo francés</td></tr>
+        <tr><td>eu-central-1</td><td>Europa (Fráncfort)</td><td>🇩🇪 Alemania</td><td>3</td><td>Muy usada, fuerte normativa alemana</td></tr>
+        <tr><td>eu-south-1</td><td>Europa (Milán)</td><td>🇮🇹 Italia</td><td>3</td><td>La más cercana geográficamente a España</td></tr>
+        <tr><td>eu-south-2</td><td>Europa (España)</td><td>🇪🇸 España</td><td>3</td><td>Región española — lanzada en 2022</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+
+<!-- ═══════════════ 3 · AVAILABILITY ZONES ═══════════════════════ -->
+<section id="az">
+  <p class="sec-label">Nivel 2</p>
+  <h2 class="sec-title">Availability Zones (AZs)</h2>
+  <p class="sec-intro">
+    Una Availability Zone es uno o más data centers dentro de una Región,
+    físicamente separados pero conectados con fibra óptica de altísima velocidad.
+    Son la clave de la <strong>alta disponibilidad</strong>.
+  </p>
+
+  <div class="analogy">
+    🏢🏢🏢 <strong>Analogía:</strong> Las AZs son como <strong>edificios distintos en la misma ciudad</strong>.
+    Misma ciudad (Región), pero cada edificio tiene su propia red eléctrica, sistema
+    antiincendios e internet. Si un edificio se inunda, los otros siguen operativos.
+  </div>
+
+  <div class="callout warn">
+    <span class="icon">⚡</span>
+    <p><strong>Dato clave para el examen:</strong>
+    Las AZs <em>NO</em> comparten puntos únicos de fallo: tienen alimentación eléctrica,
+    refrigeración y conectividad independientes. La distancia entre AZs en la misma
+    Región suele ser 10–50 km — suficiente para aislar fallos naturales,
+    pero tan cerca que la latencia entre ellas es de sólo 1–2 ms.</p>
+  </div>
+
+  <!-- DIAGRAMA AZs -->
+  <div class="code-block">
+<span class="comment"># Estructura de una Región con 3 AZs</span>
+
+<span class="orange">REGIÓN: eu-south-2 (España, Zaragoza)</span>
+├── <span class="key">Availability Zone</span> <span class="val">eu-south-2a</span>
+│   ├── Data Center A1  (servidores, SAN, switches)
+│   └── Data Center A2  (redundante)
+│
+├── <span class="key">Availability Zone</span> <span class="val">eu-south-2b</span>
+│   └── Data Center B1  (separado ~20 km)
+│
+└── <span class="key">Availability Zone</span> <span class="val">eu-south-2c</span>
+    └── Data Center C1  (separado ~35 km)
+
+<span class="comment"># Conectadas por fibra óptica redundante, latencia &lt;2ms</span>
+<span class="comment"># Si falla eu-south-2a → 2b y 2c siguen funcionando</span>
+<span class="comment"># Si falla toda la Región → necesitas otra Región (DR)</span>
+  </div>
+
+  <!-- ¿QUÉ PUEDO HACER CON MULTI-AZ? -->
+  <h3 style="font-size:1.05rem; font-weight:700; color:var(--aws-dark); margin:32px 0 12px;">
+    Multi-AZ: construyendo Alta Disponibilidad
+  </h3>
+  <div class="cards cards-3">
+    <div class="card">
+      <div class="card-accent accent-az"></div>
+      <h3>🔁 Replicación automática</h3>
+      <p>Servicios como <strong>Amazon RDS</strong> replican automáticamente los datos
+      en una segunda AZ (standby). Si falla la AZ primaria, el failover
+      ocurre en minutos sin intervención manual.</p>
+    </div>
+    <div class="card">
+      <div class="card-accent accent-az"></div>
+      <h3>⚖️ Balanceo de carga</h3>
+      <p>Un <strong>Elastic Load Balancer (ELB)</strong> distribuye el tráfico entre
+      instancias EC2 en distintas AZs. Si una AZ falla, el ELB deja de enviar
+      tráfico a esa AZ automáticamente.</p>
+    </div>
+    <div class="card">
+      <div class="card-accent accent-az"></div>
+      <h3>📡 Auto Scaling cross-AZ</h3>
+      <p>Los <strong>Auto Scaling Groups</strong> pueden distribuir instancias EC2 en
+      múltiples AZs para garantizar que la aplicación siga funcionando
+      aunque una AZ caiga.</p>
+    </div>
+  </div>
+
+  <!-- CÓMO AFECTA A LA COMUNICACIÓN -->
+  <div class="callout info" style="margin-top:24px;">
+    <span class="icon">🔗</span>
+    <p><strong>Comunicación entre AZs:</strong> El tráfico de datos entre AZs dentro de la misma
+    Región viaja por la red privada de AWS (no por internet público), es muy rápido
+    (~1–2 ms), pero <strong>tiene coste</strong>. El tráfico dentro de la misma AZ es gratuito.
+    El tráfico entre Regiones también tiene coste pero es mayor (decenas de ms de latencia).</p>
+  </div>
+
+  <!-- TABLA COSTE TRANSFERENCIA DE DATOS -->
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Ruta de datos</th><th>Latencia típica</th><th>Coste</th><th>Notas</th></tr></thead>
+      <tbody>
+        <tr><td>Dentro de la misma AZ</td><td>&lt;1 ms</td><td>✅ Gratuito</td><td>Red local del data center</td></tr>
+        <tr><td>Entre AZs (misma Región)</td><td>1–2 ms</td><td>💛 Bajo (por GB)</td><td>Red privada AWS</td></tr>
+        <tr><td>Entre Regiones</td><td>20–200 ms</td><td>🔴 Más alto</td><td>También red privada AWS</td></tr>
+        <tr><td>Internet (egress)</td><td>Variable</td><td>🔴 Por GB saliente</td><td>El tráfico entrante es gratuito</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+
+<!-- ═══════════════ 4 · EDGE LOCATIONS ══════════════════════════ -->
+<section id="edge">
+  <p class="sec-label">Nivel 3</p>
+  <h2 class="sec-title">Edge Locations y Points of Presence</h2>
+  <p class="sec-intro">
+    Las Edge Locations son puntos finales de AWS distribuidos por ciudades del mundo,
+    usados para <strong>cachear contenido</strong> cerca del usuario final.
+    No son data centers completos — su función es acercar los datos al usuario.
+  </p>
+
+  <div class="analogy">
+    🏪 <strong>Analogía Netflix:</strong> Netflix usa las Edge Locations de AWS para almacenar las
+    películas más populares en ciudades como Madrid, Barcelona o Valencia. Cuando un
+    usuario pide <em>Stranger Things</em>, no se descarga desde un servidor en Irlanda —
+    se sirve desde la Edge Location más cercana. Resultado: streaming fluido, sin buffering.
+  </div>
+
+  <div class="cards cards-3">
+    <div class="card">
+      <div class="card-accent accent-edge"></div>
+      <h3>🌐 Amazon CloudFront (CDN)</h3>
+      <p>Red de entrega de contenido (CDN). Cachea contenido estático y dinámico
+      en las Edge Locations. Primera vez: el usuario espera (va al origen).
+      Segunda vez: instantáneo (viene de la caché).</p>
+      <ul>
+        <li>Imágenes, vídeos, CSS, JS</li>
+        <li>APIs con respuestas cacheables</li>
+        <li>Sitios web estáticos (S3 + CloudFront)</li>
+        <li>Protección DDoS con AWS Shield integrado</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-accent accent-blue"></div>
+      <h3>🚀 AWS Global Accelerator</h3>
+      <p>Mejora el rendimiento de aplicaciones <strong>TCP/UDP</strong> enrutando el tráfico
+      por la red backbone de AWS (no por internet público) desde la Edge Location
+      más cercana al usuario.</p>
+      <ul>
+        <li>No cachea — sólo enruta</li>
+        <li>IPs estáticas anycast</li>
+        <li>Failover regional rápido</li>
+        <li>Juegos online, VoIP, APIs en tiempo real</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-accent accent-region"></div>
+      <h3>🔗 Amazon Route 53</h3>
+      <p>DNS global de AWS. Resuelve nombres de dominio desde Edge Locations
+      para garantizar la respuesta DNS más rápida posible al usuario.
+      Servicio <strong>globalmente resiliente</strong>.</p>
+      <ul>
+        <li>Routing latency-based</li>
+        <li>Routing geolocation</li>
+        <li>Health checks + failover</li>
+        <li>Registrador de dominios</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout warn" style="margin-top:24px;">
+    <span class="icon">🎯</span>
+    <p><strong>Para el examen:</strong> ¿Puedes elegir qué Edge Location usar?
+    <strong>No.</strong> AWS lo decide automáticamente según la localización geográfica del usuario.
+    CloudFront enruta automáticamente al PoP más cercano con menor latencia.</p>
+  </div>
+</section>
+
+
+<!-- ═══════════════ 5 · RESILIENCIA ════════════════════════════ -->
+<section id="resilience">
+  <p class="sec-label">Concepto clave del examen</p>
+  <h2 class="sec-title">Niveles de Resiliencia en AWS</h2>
+  <p class="sec-intro">
+    Cada servicio AWS tiene un nivel de resiliencia diferente.
+    Saber cuál es cada uno te ayuda a diseñar arquitecturas robustas
+    <em>y</em> a responder preguntas del examen CLF-C02.
+  </p>
+
+  <div class="resilience-grid">
+    <div class="res-card global">
+      <div class="icon-big">🌍</div>
+      <h4>Globalmente Resilientes</h4>
+      <p>El servicio opera a escala global. Sus datos se replican automáticamente
+      entre múltiples Regiones. Si una Región entera cae,
+      <strong>el servicio sigue funcionando</strong>.</p>
+      <div class="svc-list">
+        <span class="tag g">IAM</span>
+        <span class="tag g">CloudFront</span>
+        <span class="tag g">Route 53</span>
+      </div>
+    </div>
+    <div class="res-card regional">
+      <div class="icon-big">🗺️</div>
+      <h4>Resilientes por Región</h4>
+      <p>El servicio opera en una Región pero replica sus datos en
+      múltiples AZs dentro de ella. Si una AZ falla,
+      <strong>el servicio continúa</strong>. Si cae la Región entera, falla.</p>
+      <div class="svc-list">
+        <span class="tag r">RDS</span>
+        <span class="tag r">Lambda</span>
+        <span class="tag r">ECS</span>
+        <span class="tag r">EFS</span>
+        <span class="tag r">SNS/SQS</span>
+        <span class="tag r">AWS Batch</span>
+      </div>
+    </div>
+    <div class="res-card zonal">
+      <div class="icon-big">🏢</div>
+      <h4>Resilientes por AZ (Zonales)</h4>
+      <p>El servicio está ligado a <strong>una AZ concreta</strong>.
+      Si esa AZ falla, el servicio cae. <em>Tú</em> debes replicar
+      manualmente a otras AZs para conseguir alta disponibilidad.</p>
+      <div class="svc-list">
+        <span class="tag z">EC2</span>
+        <span class="tag z">EBS</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="icon">⚠️</span>
+    <p><strong>¡Truco examen!</strong> EC2 y EBS son zonales — están atados a una AZ.
+    Para alta disponibilidad con EC2 debes usar un Auto Scaling Group con instancias
+    en múltiples AZs + un Load Balancer. Para EBS, haz snapshots y recréalos en otra AZ.</p>
+  </div>
+
+  <!-- TABLA SERVICIOS vs RESILIENCIA -->
+  <h3 style="font-size:1.05rem; font-weight:700; color:var(--aws-dark); margin:32px 0 12px;">
+    Clasificación rápida: servicios del examen
+  </h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Servicio</th><th>Nivel de resiliencia</th><th>¿Qué pasa si la AZ falla?</th><th>¿Qué pasa si la Región falla?</th></tr></thead>
+      <tbody>
+        <tr><td>IAM</td><td>🌍 Global</td><td>Nada, sigue operativo</td><td>Nada, sigue operativo</td></tr>
+        <tr><td>Route 53</td><td>🌍 Global</td><td>Nada, sigue operativo</td><td>Nada, sigue operativo</td></tr>
+        <tr><td>CloudFront</td><td>🌍 Global</td><td>Nada, sigue operativo</td><td>Nada, sigue operativo</td></tr>
+        <tr><td>S3 (Standard)</td><td>🗺️ Regional</td><td>Sigue operativo (replica en 3+ AZs)</td><td>Falla (necesitas replicación cross-region)</td></tr>
+        <tr><td>RDS Multi-AZ</td><td>🗺️ Regional</td><td>Failover automático en minutos</td><td>Falla</td></tr>
+        <tr><td>Lambda</td><td>🗺️ Regional</td><td>Sigue operativo</td><td>Falla</td></tr>
+        <tr><td>EFS</td><td>🗺️ Regional</td><td>Sigue operativo</td><td>Falla</td></tr>
+        <tr><td>EC2 (una instancia)</td><td>🏢 Zonal</td><td>FALLA</td><td>FALLA</td></tr>
+        <tr><td>EBS (un volumen)</td><td>🏢 Zonal</td><td>FALLA</td><td>FALLA</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CASOS DE USO: CUÁNDO USAR VARIAS REGIONES -->
+  <h3 style="font-size:1.05rem; font-weight:700; color:var(--aws-dark); margin:32px 0 12px;">
+    ¿Cuándo usar múltiples Regiones?
+  </h3>
+  <div class="cards cards-2">
+    <div class="card">
+      <div class="card-accent accent-zonal"></div>
+      <h3>🆘 Disaster Recovery (DR)</h3>
+      <p>Si un desastre natural, ataque masivo o apagón afecta a toda una Región,
+      necesitas tener tu arquitectura replicada en otra Región distinta.
+      Define tu <strong>RTO</strong> (tiempo de recuperación) y <strong>RPO</strong>
+      (pérdida máxima de datos) para elegir la estrategia:</p>
+      <ul>
+        <li><strong>Backup &amp; Restore</strong> — más barato, más lento</li>
+        <li><strong>Pilot Light</strong> — mínima infraestructura activa</li>
+        <li><strong>Warm Standby</strong> — réplica a escala reducida</li>
+        <li><strong>Multi-site active/active</strong> — más caro, RTO ≈ 0</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-accent accent-region"></div>
+      <h3>📋 Otros motivos para Multi-Región</h3>
+      <ul style="margin-top:8px;">
+        <li><strong>Baja latencia para usuarios globales</strong> — servir desde la Región más cercana</li>
+        <li><strong>Soberanía de datos</strong> — guardar datos europeos en UE, datos chinos en China</li>
+        <li><strong>Business Continuity</strong> — SLA de alta disponibilidad (&gt;99.99%)</li>
+        <li><strong>Regulación</strong> — algunos sectores exigen redundancia geográfica</li>
+        <li><strong>Segregación de entornos</strong> — producción en us-east-1, QA en eu-west-1</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════ 6 · CLOUDFRONT VS GLOBAL ACCELERATOR ════════ -->
+<section id="cf-vs-ga">
+  <p class="sec-label">Pregunta frecuente en el examen</p>
+  <h2 class="sec-title">CloudFront vs Global Accelerator</h2>
+  <p class="sec-intro">
+    Ambos servicios usan las Edge Locations y la red global de AWS.
+    Ambos integran AWS Shield para protección DDoS.
+    <strong>Pero su función es radicalmente diferente.</strong>
+  </p>
+
+  <div class="vs-grid">
+    <div class="vs-side cf">
+      <h3>🌐 Amazon CloudFront</h3>
+      <div class="vs-row">Es un <strong>CDN (Content Delivery Network)</strong></div>
+      <div class="vs-row">Cachea contenido estático y dinámico en las Edge Locations</div>
+      <div class="vs-row">El contenido se sirve <strong>desde la Edge Location</strong> la mayoría de las veces</div>
+      <div class="vs-row">Protocolos: HTTP / HTTPS</div>
+      <div class="vs-row">Ideal para: sitios web, streaming, APIs con respuestas cacheables</div>
+      <div class="vs-row">IPs del servidor: <strong>variables</strong> (anycast, cambia según edge)</div>
+      <div class="vs-row">Reduce carga en el origen</div>
+      <div class="vs-row">Integra Lambda@Edge para lógica en el borde</div>
+    </div>
+    <div class="vs-center">VS</div>
+    <div class="vs-side ga">
+      <h3>🚀 AWS Global Accelerator</h3>
+      <div class="vs-row">Es un <strong>acelerador de red</strong> (no CDN)</div>
+      <div class="vs-row">Enruta paquetes por la red backbone de AWS, nunca por internet</div>
+      <div class="vs-row">El tráfico llega a la Edge Location y se enruta <strong>hacia la Región</strong>; <strong>no hay caché</strong></div>
+      <div class="vs-row">Protocolos: TCP y UDP</div>
+      <div class="vs-row">Ideal para: juegos, VoIP, IoT, APIs no cacheables en tiempo real</div>
+      <div class="vs-row">IPs: <strong>2 IPs estáticas anycast fijas</strong> (no cambian → útil para whitelisting)</div>
+      <div class="vs-row">Failover regional en &lt;30 s sin cambiar DNS</div>
+      <div class="vs-row">No tiene caché, sólo optimización de ruta</div>
+    </div>
+  </div>
+
+  <div class="callout tip" style="margin-top:24px;">
+    <span class="icon">🎯</span>
+    <p><strong>Regla mnemotécnica:</strong>
+    <br>CloudFront = <strong>C</strong>ontento <strong>C</strong>acheado cerca del cliente.
+    <br>Global Accelerator = paquetes que <strong>G</strong>alopa por la red privada de AWS, sin caché.</p>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Criterio</th><th>CloudFront</th><th>Global Accelerator</th></tr></thead>
+      <tbody>
+        <tr><td>¿Cachea contenido?</td><td>✅ Sí</td><td>❌ No</td></tr>
+        <tr><td>Protocolos</td><td>HTTP / HTTPS</td><td>TCP / UDP</td></tr>
+        <tr><td>IPs</td><td>Variables (anycast)</td><td>2 IPs estáticas fijas</td></tr>
+        <tr><td>Latencia mejora por</td><td>Servir desde edge (caché)</td><td>Red backbone AWS (enrutado)</td></tr>
+        <tr><td>Failover</td><td>Basado en TTL de caché</td><td>&lt;30 s (sin cambio DNS)</td></tr>
+        <tr><td>Casos de uso</td><td>Web, streaming, CDN, S3</td><td>Juegos, VoIP, APIs tiempo real</td></tr>
+        <tr><td>Integra Shield DDoS</td><td>✅ Sí</td><td>✅ Sí</td></tr>
+        <tr><td>Lambda@Edge</td><td>✅ Sí</td><td>❌ No</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+
+<!-- ═══════════════ 7 · EXAM TIPS ══════════════════════════════ -->
+<section id="exam">
+  <p class="sec-label">CLF-C02 · Task 3.2 Exam Prep</p>
+  <h2 class="sec-title">Preguntas típicas y respuestas</h2>
+  <p class="sec-intro">
+    Basadas en la guía oficial y la transcripción del curso.
+    Practica identificar la respuesta correcta <em>y</em> por qué las distractoras son incorrectas.
+  </p>
+
+  <div class="exam-section">
+    <h3>🎯 Preguntas del examen</h3>
+
+    <div class="exam-q">
+      <p class="q">1. ¿Cuál de las siguientes opciones describe mejor una Availability Zone?</p>
+      <p class="a">✅ Uno o más data centers con alimentación eléctrica, conectividad de red y refrigeración redundantes, ubicados en instalaciones separadas dentro de una Región.</p>
+      <p class="wrong">❌ Distractor: "Una Región geográfica separada" — No, eso es una Región, no una AZ.</p>
+    </div>
+
+    <div class="exam-q">
+      <p class="q">2. Una empresa quiere que su aplicación siga funcionando si falla una Availability Zone. ¿Cuál es la mejor estrategia?</p>
+      <p class="a">✅ Distribuir las instancias EC2 en múltiples Availability Zones con un Elastic Load Balancer.</p>
+      <p class="wrong">❌ Distractor: "Usar una sola instancia grande" — El tamaño no protege contra fallo de AZ.</p>
+    </div>
+
+    <div class="exam-q">
+      <p class="q">3. ¿Qué servicio de AWS es globalmente resiliente y sigue funcionando aunque falle una Región entera?</p>
+      <p class="a">✅ IAM (Identity and Access Management) — opera globalmente, replica en múltiples Regiones.</p>
+      <p class="a">✅ También: CloudFront y Route 53.</p>
+      <p class="wrong">❌ Distractor: "Amazon RDS" — RDS es regional; si cae la Región, cae el servicio.</p>
+    </div>
+
+    <div class="exam-q">
+      <p class="q">4. ¿Cuál es la diferencia entre Amazon CloudFront y AWS Global Accelerator?</p>
+      <p class="a">✅ CloudFront cachea contenido en Edge Locations (CDN, HTTP). Global Accelerator enruta tráfico TCP/UDP por la red backbone de AWS sin caché, con IPs estáticas.</p>
+    </div>
+
+    <div class="exam-q">
+      <p class="q">5. ¿Por qué razón deberías elegir una Región de AWS en Europa para tu aplicación?</p>
+      <p class="a">✅ Para cumplir con el GDPR (datos de usuarios europeos deben residir en la UE).</p>
+      <p class="a">✅ También: para reducir latencia si tus usuarios están en Europa.</p>
+    </div>
+
+    <div class="exam-q">
+      <p class="q">6. ¿Qué son las Edge Locations de AWS?</p>
+      <p class="a">✅ Puntos finales de AWS (~400 en el mundo) usados para cachear contenido, principalmente por CloudFront, para entregar datos con baja latencia a los usuarios finales.</p>
+      <p class="wrong">❌ Distractor: "Son lo mismo que las Availability Zones" — No, las Edge Locations son sólo cachés, no data centers completos.</p>
+    </div>
+
+    <div class="exam-q">
+      <p class="q">7. Una empresa quiere recuperarse de un fallo de Región completa. ¿Qué deben hacer?</p>
+      <p class="a">✅ Implementar una arquitectura multi-Región con replicación de datos y un plan de Disaster Recovery (DR) en otra Región de AWS.</p>
+    </div>
+
+    <div class="exam-q">
+      <p class="q">8. ¿Dónde están almacenados los datos de Amazon EBS?</p>
+      <p class="a">✅ En una única Availability Zone. EBS es un servicio zonal: si falla esa AZ, se pierde acceso al volumen.</p>
+    </div>
+
+  </div>
+
+  <!-- RESUMEN VISUAL FINAL -->
+  <h3 style="font-size:1.1rem; font-weight:700; color:var(--aws-dark); margin:40px 0 16px;">
+    📝 Cheatsheet: lo que no puedes olvidar
+  </h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Concepto</th><th>Definición clave</th><th>Dato examen</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Región</td>
+          <td>Área geográfica con 2+ AZs. Datos no salen de ella automáticamente.</td>
+          <td>Criterios de selección: compliance, latencia, servicios disponibles, precio</td>
+        </tr>
+        <tr>
+          <td>Availability Zone</td>
+          <td>1+ data centers físicamente separados dentro de una Región.</td>
+          <td>No comparten puntos de fallo. EC2 y EBS son zonales.</td>
+        </tr>
+        <tr>
+          <td>Edge Location</td>
+          <td>Caché de contenido cercana al usuario. ~400 en el mundo.</td>
+          <td>Usadas por CloudFront, Route 53, Global Accelerator.</td>
+        </tr>
+        <tr>
+          <td>Globalmente resiliente</td>
+          <td>Opera en todas las Regiones. Fallo de Región no lo afecta.</td>
+          <td>IAM, CloudFront, Route 53</td>
+        </tr>
+        <tr>
+          <td>Regionalmente resiliente</td>
+          <td>Opera en 1 Región, replica en sus AZs.</td>
+          <td>RDS, Lambda, ECS, EFS, S3</td>
+        </tr>
+        <tr>
+          <td>Zonal (AZ resiliente)</td>
+          <td>Ligado a una AZ. Si falla la AZ, falla el servicio.</td>
+          <td>EC2, EBS — debes replicar tú mismo.</td>
+        </tr>
+        <tr>
+          <td>CloudFront vs GA</td>
+          <td>CF = CDN con caché (HTTP). GA = enrutado TCP/UDP, IPs fijas, sin caché.</td>
+          <td>Ambos usan edge locations + Shield DDoS</td>
+        </tr>
+        <tr>
+          <td>Local Zones</td>
+          <td>Extensión de Región cerca de ciudades. Baja latencia local.</td>
+          <td>No es tan importante en CLF-C02</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</section>
+
+<!-- ═══════════════ 8 · ACTIVIDAD PRÁCTICA ══════════════════════ -->
+<section id="practica">
+  <p class="sec-label">Uso en clase · RA 3 — Módulo Optativo</p>
+  <h2 class="sec-title">Actividad Práctica Sugerida</h2>
+  <p class="sec-intro">
+    Conexión con el Resultado de Aprendizaje 3 del módulo:
+    <em>"Implementa y gestiona infraestructura y almacenamiento en la nube"</em>.
+  </p>
+
+  <div class="cards cards-2">
+    <div class="card">
+      <div class="card-accent accent-orange"></div>
+      <h3>🗺️ Taller 1: Explorar la infraestructura global</h3>
+      <ul>
+        <li>Entrar en la Consola de AWS y explorar la lista de Regiones disponibles</li>
+        <li>Cambiar de Región y observar qué servicios aparecen / desaparecen</li>
+        <li>Usar la herramienta <em>AWS Infrastructure</em> en <a href="https://infrastructure.aws" target="_blank">infrastructure.aws</a></li>
+        <li>Responder: ¿cuántas AZs tiene eu-south-2 (España)?</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-accent accent-region"></div>
+      <h3>🏢 Taller 2: Alta disponibilidad con Multi-AZ</h3>
+      <ul>
+        <li>Lanzar 2 instancias EC2 en AZs distintas de la misma Región</li>
+        <li>Crear un Application Load Balancer que distribuya entre ellas</li>
+        <li>Simular fallo: detener una instancia y verificar que el tráfico pasa a la otra</li>
+        <li>Reflexión: ¿qué coste tendría hacer lo mismo entre Regiones?</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-accent accent-edge"></div>
+      <h3>🌐 Taller 3: Distribución con CloudFront</h3>
+      <ul>
+        <li>Crear un bucket S3 con un sitio web estático</li>
+        <li>Asociar una distribución de CloudFront al bucket</li>
+        <li>Comparar tiempos de carga desde diferentes ubicaciones (VPN)</li>
+        <li>Observar las métricas de cache hit ratio en CloudFront</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-accent accent-global"></div>
+      <h3>📐 Taller 4: Diseño de arquitectura DR</h3>
+      <ul>
+        <li>Dado un caso de uso (app bancaria), diseñar arquitectura multi-Región</li>
+        <li>Identificar qué servicios usar para replicación (RDS read replica, S3 CRR)</li>
+        <li>Calcular coste adicional de multi-Región vs single-Región</li>
+        <li>Presentar el diseño justificando las decisiones de Región y AZ</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout tip" style="margin-top:24px;">
+    <span class="icon">🎓</span>
+    <p><strong>Conexión con IaC (tu especialidad):</strong> En los talleres 2 y 3,
+    pide a los alumnos que realicen la misma configuración tanto desde la Consola como
+    con Terraform/CloudFormation. Así interiorizan que la infraestructura global de AWS
+    es código: <code>availability_zones = ["eu-south-2a", "eu-south-2b"]</code> en un
+    módulo de Terraform es lo mismo que hacer clic en la Consola.</p>
+  </div>
+</section>
+
+</div><!-- /page -->
+
+<footer>
+  <div class="page">
+    <p><strong>Task 3.2 · Define the AWS Global Infrastructure</strong></p>
+    <p style="margin-top:8px;">CLF-C02 Domain 3 · 34 % del examen · Módulo Optativo IYC — Computación en la Nube</p>
+    <p style="margin-top:8px; color:#475569;">Fuentes: AWS Exam Guide CLF-C02 · Course Transcript Task 3.2 · OPTATIVAS_IYC_Cloud.docx</p>
+  </div>
+</footer>
+
+<script>
+  // Nav tab highlight on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const tabs = document.querySelectorAll('.nav-tab');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        tabs.forEach(t => t.classList.remove('active'));
+        const active = document.querySelector(`.nav-tab[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.3 });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
